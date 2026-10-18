@@ -1,9 +1,9 @@
 import { and, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
 import type { DbOrTx } from "../db";
 import { schema } from "../db";
-import { entryValue } from "@/lib/money";
+import { rateValue } from "@/lib/money";
 import { localDate } from "@/lib/time";
-import type { RateStatus } from "../db/schema";
+import type { RateStatus, RateUnit } from "../db/schema";
 
 type Rate = typeof schema.rates.$inferSelect;
 
@@ -67,13 +67,14 @@ export async function resolveRate(
 export async function priceEntry(
   tx: DbOrTx,
   e: { companyId: string; workerId: string; projectId: string; jobRoleId: string; startAt: Date; durationSeconds: number },
-): Promise<{ rateId: string | null; appliedRate: string | null; value: string | null; rateStatus: RateStatus; currency: string }> {
+): Promise<{ rateId: string | null; appliedRate: string | null; rateUnit: RateUnit; value: string | null; rateStatus: RateStatus; currency: string }> {
   const r = await resolveRate(tx, { ...e, onDate: localDate(e.startAt) });
-  if (r.status !== "ok") return { rateId: null, appliedRate: null, value: null, rateStatus: r.status, currency: "EUR" };
+  if (r.status !== "ok") return { rateId: null, appliedRate: null, rateUnit: "hour", value: null, rateStatus: r.status, currency: "EUR" };
   return {
     rateId: r.rate.id,
     appliedRate: r.rate.hourlyRate,
-    value: entryValue(e.durationSeconds, r.rate.hourlyRate),
+    rateUnit: r.rate.unit,
+    value: rateValue(r.rate.unit, e.durationSeconds, r.rate.hourlyRate),
     rateStatus: "ok",
     currency: r.rate.currency,
   };

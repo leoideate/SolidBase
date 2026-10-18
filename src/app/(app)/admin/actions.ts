@@ -3,20 +3,21 @@
 import { bool, runAction, str } from "@/server/action";
 import type { ActionState } from "@/server/action";
 import * as admin from "@/server/services/admin";
+import { personFromForm } from "@/server/services/people";
 
 const R = { revalidate: "/admin" };
 const roles = (fd: FormData) => ({ isWorker: bool(fd, "isWorker"), isManager: bool(fd, "isManager"), isAdmin: bool(fd, "isAdmin"), isIt: bool(fd, "isIt") });
 
 export async function createUserAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (a) => {
-    await admin.createUser(a, { username: str(fd, "username"), displayName: str(fd, "displayName"), workerCode: str(fd, "workerCode"), pin: str(fd, "pin"), ...roles(fd) });
+    await admin.createUser(a, { username: str(fd, "username"), workerCode: str(fd, "workerCode"), pin: str(fd, "pin"), person: personFromForm(fd), ...roles(fd) });
     return "User created. Give them their username and temporary PIN; they will set their own PIN on first login.";
   }, R);
 }
 
 export async function updateUserAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (a) => {
-    await admin.updateUser(a, str(fd, "memberId"), { displayName: str(fd, "displayName"), workerCode: str(fd, "workerCode"), ...roles(fd) });
+    await admin.updateUser(a, str(fd, "memberId"), { workerCode: str(fd, "workerCode"), person: personFromForm(fd), ...roles(fd) });
   }, R);
 }
 
@@ -71,7 +72,26 @@ export async function revokeCostAction(_: ActionState, fd: FormData): Promise<Ac
 
 export async function saveProjectAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (a) => {
-    await admin.saveProject(a, { id: str(fd, "id") || undefined, code: str(fd, "code"), name: str(fd, "name"), siteRef: str(fd, "siteRef"), isActive: bool(fd, "isActive") });
+    await admin.saveProject(a, {
+      id: str(fd, "id") || undefined,
+      code: str(fd, "code"),
+      name: str(fd, "name"),
+      siteRef: str(fd, "siteRef"),
+      clientId: str(fd, "clientId") || null,
+      principal: str(fd, "principal"),
+      projectType: str(fd, "projectType"),
+      description: str(fd, "description"),
+      address: str(fd, "address"),
+      startDate: str(fd, "startDate"),
+      endDate: str(fd, "endDate"),
+      isActive: bool(fd, "isActive"),
+    });
+  }, R);
+}
+
+export async function saveClientAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (a) => {
+    await admin.saveClient(a, { id: str(fd, "id") || undefined, name: str(fd, "name"), isActive: bool(fd, "isActive") });
   }, R);
 }
 
@@ -88,6 +108,7 @@ export async function addRateAction(_: ActionState, fd: FormData): Promise<Actio
       workerId: str(fd, "workerId") || null,
       projectId: str(fd, "projectId") || null,
       hourlyRate: str(fd, "hourlyRate"),
+      unit: str(fd, "unit"),
       effectiveFrom: str(fd, "effectiveFrom"),
       effectiveTo: str(fd, "effectiveTo") || null,
     });

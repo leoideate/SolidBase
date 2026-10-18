@@ -4,6 +4,8 @@ import { requireActor } from "@/server/auth/session";
 import { listCrew } from "@/server/services/crew";
 import { companyLookups } from "@/server/services/views";
 import { ActionForm, SubmitButton } from "@/components/action-form";
+import { PersonFields } from "@/components/person-fields";
+import { ENGAGEMENT_LABEL } from "@/lib/labels";
 import { Empty, PageHeader } from "@/components/ui";
 import { addCrewWorkerAction, crewAllocationsAction } from "../actions";
 
@@ -56,16 +58,7 @@ export default async function CrewPage() {
         <details>
           <summary className="cursor-pointer text-sm font-semibold text-blue-700">+ Add a worker</summary>
           <ActionForm action={addCrewWorkerAction} className="mt-3 space-y-3" resetOnSuccess>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label" htmlFor="displayName">Full name</label>
-                <input id="displayName" name="displayName" className="input" required />
-              </div>
-              <div>
-                <label className="label" htmlFor="workerCode">Worker ID</label>
-                <input id="workerCode" name="workerCode" className="input" placeholder="e.g. W010" required />
-              </div>
-            </div>
+            <PersonFields />
             <AllocationChecks lookups={lookups} />
             <p className="muted">The worker can&apos;t log in yet. You enter their hours. If they should clock in on their own phone, ask admin to set a PIN.</p>
             <SubmitButton>Add worker</SubmitButton>
@@ -86,6 +79,8 @@ export default async function CrewPage() {
                   </div>
                   <div className="text-sm text-slate-600">
                     {w.roleIds.map((id) => roleName.get(id)).join(", ") || "No roles"} · {w.projectIds.map((id) => projectCode.get(id)).join(", ") || "No projects"}
+                    {w.engagementType && <> · {ENGAGEMENT_LABEL[w.engagementType]}</>}
+                    {w.mobile && <> · {w.mobile}</>}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">

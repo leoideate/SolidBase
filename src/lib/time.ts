@@ -47,6 +47,11 @@ export function elapsedSeconds(start: Date, end: Date): number {
   return Math.floor((end.getTime() - start.getTime()) / 1000);
 }
 
+/** Paid seconds: elapsed time minus an unpaid break entered by the supervisor. */
+export function paidSeconds(start: Date, end: Date, breakMinutes = 0): number {
+  return elapsedSeconds(start, end) - breakMinutes * 60;
+}
+
 /**
  * Split [start, end) at every Dublin week boundary. Each piece belongs to exactly one week, with no
  * time duplicated or lost.

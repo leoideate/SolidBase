@@ -7,6 +7,8 @@ import { parseLocalDateTime, weekStartOf } from "@/lib/time";
 import { audit } from "./audit";
 import { writeAllocations } from "./admin";
 import { insertManagerEntry, mapDbError } from "./corrections";
+import { nextWorkerCode, personValues } from "./people";
+import type { PersonInput } from "./people";
 
 /**
  * Supervisor crew management. A supervisor (manager) adds workers to their own crew, chooses the
@@ -34,6 +36,8 @@ export async function listCrew(actor: Actor) {
       name: schema.users.displayName,
       username: schema.users.username,
       workerCode: schema.companyMembers.workerCode,
+      engagementType: schema.companyMembers.engagementType,
+      mobile: schema.users.mobile,
       isActive: schema.companyMembers.isActive,
       hasPin: sql<boolean>`${schema.users.pinHash} is not null`,
     })
@@ -53,23 +57,21 @@ export async function listCrew(actor: Actor) {
 /** Supervisor adds a worker to their crew. No PIN: the worker can't log in until admin sets one. */
 export async function addCrewWorker(
   actor: Actor,
-  input: { displayName: string; workerCode: string; projectIds: string[]; jobRoleIds: string[] },
+  input: { person: PersonInput; workerCode?: string; projectIds: string[]; jobRoleIds: string[] },
 ) {
   requireSupervisor(actor);
-  const displayName = input.displayName.trim();
-  const workerCode = input.workerCode.trim();
-  if (!displayName) throw new AppError("Name is required.");
-  if (!workerCode) throw new AppError("Worker ID is required.");
+  const person = personValues(input.person);
   if (input.jobRoleIds.length === 0) throw new AppError("Choose at least one role.");
   try {
     return await db.transaction(async (tx) => {
+      const workerCode = input.workerCode?.trim() || (await nextWorkerCode(tx, actor.companyId));
       const [user] = await tx
         .insert(schema.users)
-        .values({ username: usernameFor(workerCode), displayName, pinHash: null, mustChangePin: true })
+        .values({ username: usernameFor(workerCode), ...person.user, pinHash: null, mustChangePin: true })
         .returning();
       const [member] = await tx
         .insert(schema.companyMembers)
-        .values({ companyId: actor.companyId, userId: user.id, workerCode, isWorker: true })
+        .values({ companyId: actor.companyId, userId: user.id, workerCode, engagementType: person.engagementType, isWorker: true })
         .returning();
       if (actor.isManager) {
         await tx
@@ -95,7 +97,7 @@ export async function setCrewAllocations(actor: Actor, workerId: string, project
   });
 }
 
-export type CrewHoursRow = { workerId: string; jobRoleId: string; start: string; end: string };
+export type CrewHoursRow = { workerId: string; jobRoleId: string; start: string; end: string; breakMinutes?: number; note?: string };
 
 export const CREW_HOURS_REASON = "Hours entered by supervisor";
 
@@ -114,7 +116,7 @@ export async function enterCrewHours(actor: Actor, input: { date: string; projec
     if (!startAt || !endAt) throw new AppError("Enter start and end times as HH:MM.");
     if (endAt <= startAt) endAt = parseLocalDateTime(`${nextDay(input.date)}T${r.end}`)!;
     if (!r.jobRoleId) throw new AppError("Choose a role for every ticked worker.");
-    return { workerId: r.workerId, input: { projectId: input.projectId, jobRoleId: r.jobRoleId, startAt, endAt } };
+    return { workerId: r.workerId, input: { projectId: input.projectId, jobRoleId: r.jobRoleId, startAt, endAt, breakMinutes: r.breakMinutes ?? 0, note: r.note } };
   });
   try {
     return await db.transaction(async (tx) => {

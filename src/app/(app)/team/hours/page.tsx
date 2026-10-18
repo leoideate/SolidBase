@@ -63,7 +63,7 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
           <input type="hidden" name="date" value={date} />
           <input type="hidden" name="projectId" value={projectId} />
           <p className="muted">
-            {fmtDate(date)}. Tick each worker who worked, then check their role and times. An end time earlier than the start counts as the next morning.
+            {fmtDate(date)}. Tick each worker who worked, then check their role, start, end, unpaid break (minutes) and what work was done. An end time earlier than the start counts as the next morning.
           </p>
           <ul className="divide-y divide-slate-200">
             {crew.map((w) => {
@@ -71,7 +71,7 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
               const done = entries.filter((e) => e.workerId === w.id);
               const sheet = sheets.find((s) => s.workerId === w.id);
               return (
-                <li key={w.id} className="grid gap-2 py-3 sm:grid-cols-[minmax(10rem,1.5fr)_1.5fr_1fr_1fr] sm:items-center">
+                <li key={w.id} className="grid gap-2 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1.5fr)_1.3fr_6.5rem_6.5rem_5.5rem_2fr] lg:items-center">
                   <input type="hidden" name="workerId" value={w.id} />
                   <label className="flex items-start gap-2">
                     <input type="checkbox" name={`on_${w.id}`} className="mt-1 size-5" aria-label={`${w.name} worked`} disabled={sheet?.status === "approved"} />
@@ -100,6 +100,8 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
                   </select>
                   <input type="time" name={`start_${w.id}`} className="input" defaultValue="07:00" aria-label={`${w.name} start`} />
                   <input type="time" name={`end_${w.id}`} className="input" defaultValue="15:30" aria-label={`${w.name} end`} />
+                  <input type="number" name={`break_${w.id}`} className="input" min={0} max={600} defaultValue={30} aria-label={`${w.name} unpaid break minutes`} title="Unpaid break (minutes)" />
+                  <input name={`note_${w.id}`} className="input" placeholder="Work done" aria-label={`${w.name} work done`} />
                 </li>
               );
             })}

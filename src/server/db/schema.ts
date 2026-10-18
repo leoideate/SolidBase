@@ -58,7 +58,13 @@ export const moduleEnablements = pgTable(
 export const users = pgTable("users", {
   id: id(),
   username: text("username").notNull().unique(), // stored lower-case
-  displayName: text("display_name").notNull(),
+  displayName: text("display_name").notNull(), // "First Middle Last", kept for display and history
+  firstName: text("first_name"),
+  middleName: text("middle_name"),
+  lastName: text("last_name"),
+  email: text("email"), // contact only; login is username + PIN
+  mobile: text("mobile"),
+  address: text("address"),
   pinHash: text("pin_hash"), // NULL = no app login yet (worker added by a supervisor; admin sets the PIN)
   mustChangePin: boolean("must_change_pin").notNull().default(true),
   failedAttempts: integer("failed_attempts").notNull().default(0),
@@ -66,6 +72,9 @@ export const users = pgTable("users", {
   language: text("language").notNull().default("en"),
   createdAt: createdAt(),
 });
+
+export const ENGAGEMENT_TYPES = ["paye", "sub_contractor", "contractor"] as const;
+export type EngagementType = (typeof ENGAGEMENT_TYPES)[number];
 
 /** A user's engagement with one company, including access roles. */
 export const companyMembers = pgTable(
@@ -75,6 +84,7 @@ export const companyMembers = pgTable(
     companyId: uuid("company_id").notNull().references(() => companies.id),
     userId: uuid("user_id").notNull().references(() => users.id),
     workerCode: text("worker_code").notNull(),
+    engagementType: text("engagement_type", { enum: ENGAGEMENT_TYPES }),
     isActive: boolean("is_active").notNull().default(true),
     isWorker: boolean("is_worker").notNull().default(true),
     isManager: boolean("is_manager").notNull().default(false),
@@ -103,18 +113,44 @@ export const sessions = pgTable(
 // Setup: projects, job roles, rates, assignments, permissions
 // ---------------------------------------------------------------------------
 
+/** Clients the company works for (chosen from a list when adding a project). */
+export const clients = pgTable(
+  "clients",
+  {
+    id: id(),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    name: text("name").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [unique().on(t.companyId, t.name)],
+);
+
+export const PROJECT_TYPES = ["labour_hours", "bill_of_quantity", "work_contract", "other"] as const;
+export type ProjectType = (typeof PROJECT_TYPES)[number];
+
 export const projects = pgTable(
   "projects",
   {
     id: id(),
     companyId: uuid("company_id").notNull().references(() => companies.id),
-    code: text("code").notNull(),
+    code: text("code").notNull(), // shown as "Project ID"
     name: text("name").notNull(),
-    siteRef: text("site_ref"),
+    siteRef: text("site_ref"), // shown as "SIN (Site Identification Number)"
+    clientId: uuid("client_id").references(() => clients.id),
+    principal: text("principal"),
+    projectType: text("project_type", { enum: PROJECT_TYPES }),
+    description: text("description"),
+    address: text("address"),
+    startDate: date("start_date", { mode: "string" }),
+    endDate: date("end_date", { mode: "string" }),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
   },
-  (t) => [unique().on(t.companyId, t.code)],
+  (t) => [
+    unique().on(t.companyId, t.code),
+    check("project_dates", sql`${t.endDate} IS NULL OR ${t.startDate} IS NULL OR ${t.endDate} >= ${t.startDate}`),
+  ],
 );
 
 export const jobRoles = pgTable(
@@ -197,8 +233,11 @@ export const supportGrants = pgTable("support_grants", {
   revokedBy: uuid("revoked_by").references(() => companyMembers.id),
 });
 
+export const RATE_UNITS = ["hour", "day"] as const;
+export type RateUnit = (typeof RATE_UNITS)[number];
+
 /**
- * Agreed hourly worker rates (F04). Specificity: worker+project > worker > project > role.
+ * Agreed hourly or daily worker rates (F04). Specificity: worker+project > worker > project > role.
  * These are worker pay rates, separate from any future client billing rate.
  */
 export const rates = pgTable(
@@ -209,7 +248,8 @@ export const rates = pgTable(
     jobRoleId: uuid("job_role_id").notNull().references(() => jobRoles.id),
     workerId: uuid("worker_id").references(() => companyMembers.id),
     projectId: uuid("project_id").references(() => projects.id),
-    hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }).notNull(),
+    hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }).notNull(), // amount per `unit`
+    unit: text("unit", { enum: RATE_UNITS }).notNull().default("hour"),
     currency: char("currency", { length: 3 }).notNull().default("EUR"),
     effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
     effectiveTo: date("effective_to", { mode: "string" }),
@@ -301,9 +341,12 @@ export const workEntries = pgTable(
     timesheetId: uuid("timesheet_id").notNull().references(() => timesheets.id),
     startAt: ts("start_at").notNull(),
     endAt: ts("end_at"),
-    durationSeconds: integer("duration_seconds"),
+    durationSeconds: integer("duration_seconds"), // paid time: elapsed seconds minus the unpaid break
+    breakMinutes: integer("break_minutes").notNull().default(0),
+    note: text("note"), // what work was done, added by the supervisor
     rateId: uuid("rate_id").references(() => rates.id),
     appliedRate: numeric("applied_rate", { precision: 10, scale: 2 }),
+    rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("hour"),
     currency: char("currency", { length: 3 }).notNull().default("EUR"),
     value: numeric("value", { precision: 12, scale: 2 }),
     rateStatus: text("rate_status", { enum: RATE_STATUSES }).notNull().default("pending"),
@@ -322,6 +365,7 @@ export const workEntries = pgTable(
     check("entry_end_after_start", sql`${t.endAt} IS NULL OR ${t.endAt} > ${t.startAt}`),
     check("entry_open_has_no_end", sql`${t.status} <> 'open' OR ${t.endAt} IS NULL`),
     check("entry_closed_has_end", sql`${t.status} <> 'closed' OR ${t.endAt} IS NOT NULL`),
+    check("entry_break_valid", sql`${t.breakMinutes} >= 0 AND (${t.durationSeconds} IS NULL OR ${t.durationSeconds} >= 0)`),
   ],
 );
 

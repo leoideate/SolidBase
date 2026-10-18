@@ -9,6 +9,8 @@ import { isMoney } from "@/lib/money";
 import { audit } from "./audit";
 import { repriceUnapproved } from "./rates";
 import { revokeUserSessions } from "./auth";
+import { nextWorkerCode, personValues } from "./people";
+import type { PersonInput } from "./people";
 
 /** Administration of business setup (ARD section 2, F02–F04, A01–A05). Admin only. */
 
@@ -25,27 +27,28 @@ export type MemberRoles = { isWorker: boolean; isManager: boolean; isAdmin: bool
 
 export async function createUser(
   actor: Actor,
-  input: { username: string; displayName: string; workerCode: string; pin: string } & MemberRoles,
+  input: { username: string; workerCode?: string; pin: string; person: PersonInput } & MemberRoles,
 ) {
   requireAdmin(actor);
   const username = input.username.trim().toLowerCase();
   if (!/^[a-z0-9._-]{3,40}$/.test(username)) throw new AppError("Username: 3–40 letters, digits, dot, dash or underscore.");
-  if (!input.displayName.trim()) throw new AppError("Name is required.");
-  if (!input.workerCode.trim()) throw new AppError("Worker ID is required.");
+  const person = personValues(input.person);
   if (!isValidPin(input.pin)) throw new AppError("Temporary PIN must be 6 digits and not a simple sequence.");
   validateRoles(input);
   try {
     return await db.transaction(async (tx) => {
+      const workerCode = input.workerCode?.trim() || (await nextWorkerCode(tx, actor.companyId));
       const [user] = await tx
         .insert(schema.users)
-        .values({ username, displayName: input.displayName.trim(), pinHash: await hashPin(input.pin), mustChangePin: true })
+        .values({ username, ...person.user, pinHash: await hashPin(input.pin), mustChangePin: true })
         .returning();
       const [member] = await tx
         .insert(schema.companyMembers)
         .values({
           companyId: actor.companyId,
           userId: user.id,
-          workerCode: input.workerCode.trim(),
+          workerCode,
+          engagementType: person.engagementType,
           isWorker: input.isWorker,
           isManager: input.isManager,
           isAdmin: input.isAdmin,
@@ -69,10 +72,12 @@ function validateRoles(r: MemberRoles) {
 const rolesOf = (r: MemberRoles) =>
   (["isWorker", "isManager", "isAdmin", "isIt"] as const).filter((k) => r[k]).map((k) => k.slice(2).toLowerCase());
 
-export async function updateUser(actor: Actor, memberId: string, input: { displayName: string; workerCode: string } & MemberRoles) {
+export async function updateUser(actor: Actor, memberId: string, input: { workerCode: string; person: PersonInput } & MemberRoles) {
   requireAdmin(actor);
   const m = await memberInCompany(actor, memberId);
   validateRoles(input);
+  const person = personValues(input.person);
+  if (!input.workerCode.trim()) throw new AppError("Worker ID is required.");
   if (m.id === actor.memberId && !input.isAdmin) throw new AppError("You cannot remove your own administrator access.");
   try {
     await db.transaction(async (tx) => {
@@ -80,13 +85,14 @@ export async function updateUser(actor: Actor, memberId: string, input: { displa
         .update(schema.companyMembers)
         .set({
           workerCode: input.workerCode.trim(),
+          engagementType: person.engagementType,
           isWorker: input.isWorker,
           isManager: input.isManager,
           isAdmin: input.isAdmin,
           isIt: input.isIt,
         })
         .where(eq(schema.companyMembers.id, m.id));
-      await tx.update(schema.users).set({ displayName: input.displayName.trim() }).where(eq(schema.users.id, m.userId));
+      await tx.update(schema.users).set(person.user).where(eq(schema.users.id, m.userId));
       // Removing the manager role revokes all assignments (A01).
       if (m.isManager && !input.isManager) {
         await tx.delete(schema.managerAssignments).where(eq(schema.managerAssignments.managerId, m.id));
@@ -132,29 +138,94 @@ export async function resetPin(actor: Actor, memberId: string, tempPin: string) 
 
 // --- Projects and roles ----------------------------------------------------
 
-export async function saveProject(actor: Actor, input: { id?: string; code: string; name: string; siteRef?: string; isActive: boolean }) {
+export type ProjectInput = {
+  id?: string;
+  code: string;
+  name: string;
+  siteRef?: string;
+  clientId?: string | null;
+  principal?: string;
+  projectType?: string;
+  description?: string;
+  address?: string;
+  startDate?: string;
+  endDate?: string;
+  isActive: boolean;
+};
+
+const optional = (v: string | undefined | null) => v?.trim() || null;
+const isDate = (v: string | null) => v === null || /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+/** Project setup (F03 and the client's "Projects Fields" sheet). The code is shown as "Project ID". */
+export async function saveProject(actor: Actor, input: ProjectInput) {
   requireAdmin(actor);
   const code = input.code.trim().toUpperCase();
-  if (!code || !input.name.trim()) throw new AppError("Project code and name are required.");
+  if (!code || !input.name.trim()) throw new AppError("Project ID and project name are required.");
+  const projectType = optional(input.projectType);
+  if (projectType && !(schema.PROJECT_TYPES as readonly string[]).includes(projectType)) throw new AppError("Unknown project type.");
+  const startDate = optional(input.startDate);
+  const endDate = optional(input.endDate);
+  if (!isDate(startDate) || !isDate(endDate)) throw new AppError("Enter valid start and end dates.");
+  if (startDate && endDate && endDate < startDate) throw new AppError("The end date must be on or after the start date.");
+  const clientId = optional(input.clientId);
+  if (clientId) {
+    const [c] = await db.select({ id: schema.clients.id }).from(schema.clients).where(and(eq(schema.clients.id, clientId), eq(schema.clients.companyId, actor.companyId)));
+    if (!c) throw new AppError("Unknown client.");
+  }
+  const values = {
+    code,
+    name: input.name.trim(),
+    siteRef: optional(input.siteRef),
+    clientId,
+    principal: optional(input.principal),
+    projectType: projectType as schema.ProjectType | null,
+    description: optional(input.description),
+    address: optional(input.address),
+    startDate,
+    endDate,
+    isActive: input.isActive,
+  };
   try {
     if (input.id) {
       const [p] = await db
         .update(schema.projects)
-        .set({ code, name: input.name.trim(), siteRef: input.siteRef?.trim() || null, isActive: input.isActive })
+        .set(values)
         .where(and(eq(schema.projects.id, input.id), eq(schema.projects.companyId, actor.companyId)))
         .returning();
       if (!p) throw new NotFound();
       await audit(db, actor, "project.updated", "project", p.id, { code, isActive: input.isActive });
       return p;
     }
-    const [p] = await db
-      .insert(schema.projects)
-      .values({ companyId: actor.companyId, code, name: input.name.trim(), siteRef: input.siteRef?.trim() || null, isActive: input.isActive })
-      .returning();
+    const [p] = await db.insert(schema.projects).values({ companyId: actor.companyId, ...values }).returning();
     await audit(db, actor, "project.created", "project", p.id, { code });
     return p;
   } catch (e) {
-    if (pgCode(e) === "23505") throw new AppError(`Project code ${code} already exists.`);
+    if (pgCode(e) === "23505") throw new AppError(`Project ID ${code} already exists.`);
+    throw e;
+  }
+}
+
+/** Clients chosen from a list when setting up projects. */
+export async function saveClient(actor: Actor, input: { id?: string; name: string; isActive: boolean }) {
+  requireAdmin(actor);
+  const name = input.name.trim();
+  if (!name) throw new AppError("Client name is required.");
+  try {
+    if (input.id) {
+      const [c] = await db
+        .update(schema.clients)
+        .set({ name, isActive: input.isActive })
+        .where(and(eq(schema.clients.id, input.id), eq(schema.clients.companyId, actor.companyId)))
+        .returning();
+      if (!c) throw new NotFound();
+      await audit(db, actor, "client.updated", "client", c.id, { name, isActive: input.isActive });
+      return c;
+    }
+    const [c] = await db.insert(schema.clients).values({ companyId: actor.companyId, name, isActive: input.isActive }).returning();
+    await audit(db, actor, "client.created", "client", c.id, { name });
+    return c;
+  } catch (e) {
+    if (pgCode(e) === "23505") throw new AppError(`Client "${name}" already exists.`);
     throw e;
   }
 }
@@ -187,9 +258,11 @@ export async function saveJobRole(actor: Actor, input: { id?: string; code: stri
 
 export async function addRate(
   actor: Actor,
-  input: { jobRoleId: string; workerId?: string | null; projectId?: string | null; hourlyRate: string; effectiveFrom: string; effectiveTo?: string | null },
+  input: { jobRoleId: string; workerId?: string | null; projectId?: string | null; hourlyRate: string; unit?: string; effectiveFrom: string; effectiveTo?: string | null },
 ) {
   requireAdmin(actor);
+  const unit = input.unit || "hour";
+  if (unit !== "hour" && unit !== "day") throw new AppError("Choose hourly or day rate.");
   if (!isMoney(input.hourlyRate)) throw new AppError("Rate must be a positive amount with up to 2 decimals.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.effectiveFrom)) throw new AppError("Effective-from date is required.");
   if (input.effectiveTo && input.effectiveTo < input.effectiveFrom) throw new AppError("Effective-to must be on or after effective-from.");
@@ -212,6 +285,7 @@ export async function addRate(
         workerId: input.workerId || null,
         projectId: input.projectId || null,
         hourlyRate: input.hourlyRate,
+        unit,
         effectiveFrom: input.effectiveFrom,
         effectiveTo: input.effectiveTo || null,
         createdBy: actor.memberId,

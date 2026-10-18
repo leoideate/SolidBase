@@ -7,6 +7,7 @@ import { AppError } from "@/server/errors";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
 import { RoleCheckboxes } from "@/components/role-checkboxes";
+import { PersonFields } from "@/components/person-fields";
 import {
   allocationsAction,
   assignManagerAction,
@@ -47,19 +48,10 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card">
-          <h2 className="h2 mb-3">Details and access roles</h2>
+          <h2 className="h2 mb-3">Worker details and access roles</h2>
           <ActionForm action={updateUserAction} className="space-y-3">
             <input type="hidden" name="memberId" value={m.id} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label">Full name</label>
-                <input name="displayName" className="input" defaultValue={u.displayName} required />
-              </div>
-              <div>
-                <label className="label">Worker ID</label>
-                <input name="workerCode" className="input" defaultValue={m.workerCode} required />
-              </div>
-            </div>
+            <PersonFields p={{ ...u, engagementType: m.engagementType }} workerCode={m.workerCode} autoCode={false} />
             <RoleCheckboxes d={m} />
             <SubmitButton>Save</SubmitButton>
           </ActionForm>

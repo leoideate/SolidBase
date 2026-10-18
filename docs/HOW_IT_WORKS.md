@@ -145,7 +145,7 @@ Example: 20 h × €28 + 15 h × €30 + 5 h × €25 = **€1,135.00** for **40
 
 Code: `src/server/services/rates.ts`
 
-Admin enters agreed hourly rates (EUR) with an *effective from* date and an optional *effective to* date. A rate always belongs to a role, and can also be tied to a worker, a project, or both.
+Admin enters agreed rates (EUR) **per hour or per day**, with an *effective from* date and an optional *effective to* date. A rate always belongs to a role, and can also be tied to a worker, a project, or both.
 
 When an entry is priced, `resolveRate()` collects every rate that applies to its worker, project and role on the entry's Dublin start date. `pickRate()` then chooses one:
 
@@ -154,7 +154,7 @@ When an entry is priced, `resolveRate()` collects every rate that applies to its
 3. If two rates are tied at the same level and date, the result is a **conflict**.
 4. If no rate applies, the result is **missing**.
 
-`priceEntry()` stores `rateId`, `appliedRate`, `value` and `rateStatus` (`ok` / `missing` / `conflict`) on the entry. A missing or conflicting rate never stops a worker recording time, but it **blocks approval** until admin fixes it.
+`priceEntry()` stores `rateId`, `appliedRate`, `rateUnit` (`hour` / `day`), `value` and `rateStatus` (`ok` / `missing` / `conflict`) on the entry. An hourly value is paid seconds × rate. A day-rate value is the day amount (`rateValue` in `src/lib/money.ts`). Two day-rate entries on the same day block approval (`day_rate_twice`), so a day is never paid twice. A missing or conflicting rate never stops a worker recording time, but it **blocks approval** until admin fixes it.
 
 When admin adds or ends a rate, `repriceUnapproved()` re-prices closed entries in timesheets that are **not approved**. Approved values are never rewritten.
 
@@ -236,9 +236,9 @@ Code: `src/server/services/crew.ts`, screens `/team/crew` and `/team/hours`
 
 Supervisors (managers) can run their crew without every worker using the app:
 
-1. **My crew** (`/team/crew`). The supervisor adds a worker with a name, a worker ID, their roles and their projects (`addCrewWorker`). The worker is assigned to that supervisor automatically, and nobody else's crew is affected. The supervisor can change a crew member's roles and projects at any time (`setCrewAllocations`).
+1. **My crew** (`/team/crew`). The supervisor adds a worker with first, middle and last name, contact details, engagement type, their roles and their projects (`addCrewWorker`). The worker ID is generated automatically (W001, W002…) unless one is typed in. The worker is assigned to that supervisor automatically, and nobody else's crew is affected. The supervisor can change a crew member's roles and projects at any time (`setCrewAllocations`).
 2. **No PIN until admin gives one.** A worker added by a supervisor has no PIN (`users.pin_hash` is NULL), so they can't log in. Only admin can give app access, using **Set PIN** on the user's page. The login name is `w.<worker id>`, shown on that page.
-3. **Enter hours** (`/team/hours`). The supervisor picks a day and a project, ticks each worker who worked, and checks each one's role, start and end. All ticked rows are saved together or not at all (`enterCrewHours`). An end time earlier than the start counts as the next morning. Each row becomes an ordinary priced entry with `source = 'manager'` and the reason "Hours entered by supervisor", so overlap checks, week rules and locking apply as usual.
+3. **Enter hours** (`/team/hours`). The supervisor picks a day and a project, ticks each worker who worked, and checks each one's role, start, end, **unpaid break minutes** and **work done** comment. The break is deducted from the paid time. All ticked rows are saved together or not at all (`enterCrewHours`). An end time earlier than the start counts as the next morning. Each row becomes an ordinary priced entry with `source = 'manager'` and the reason "Hours entered by supervisor", so overlap checks, week rules and locking apply as usual.
 4. **Submit and approve.** Once the week has ended, the supervisor opens the worker's timesheet from the team queue, submits it on the worker's behalf (`submitOnBehalf`), and approves it. The supervisor may approve hours they entered for others, but never their own.
 
 ## 10. Guarantees enforced by the database
@@ -261,7 +261,7 @@ Both read **approved entries only**, through `approvedEntries()` in `views.ts`. 
 **CSV export** (`exports.ts`, `GET /api/export`):
 
 - a manager's export contains only their assigned workers, and only when admin has enabled export; a CostMaster export contains only granted projects and requires *Can export*;
-- there is one row per approved entry, with ISO 8601 timestamps carrying the Dublin offset, decimal hours, **`Duration seconds`** for exact reconciliation, the applied rate, the value, the approver and the approved version;
+- there is one row per approved entry, with ISO 8601 timestamps carrying the Dublin offset, unpaid break minutes, decimal hours, **`Duration seconds`** for exact reconciliation, the agreed pay rate and rate type (Hourly or Day), the value, the approver, the approved version and the work-done comment;
 - cells are protected against spreadsheet formula injection (`csvCell`), and the file starts with a UTF-8 BOM;
 - every download is logged in `exports` and `export_items` with the exact entry IDs and versions, and is visible under Admin → Export history.
 
@@ -293,18 +293,19 @@ Day-to-day admin tasks are covered in [ADMIN_GUIDE.md](ADMIN_GUIDE.md).
 | Table | Holds |
 |---|---|
 | `companies`, `company_settings`, `module_enablements` | The company, its timezone and currency, and its settings (long-shift hours, manager export) |
-| `users` | Login identity: username, PIN hash, lockout state |
-| `company_members` | A user's membership in a company: worker code and role flags |
+| `users` | Login identity and personal details: username, PIN hash (NULL means no app login), lockout state, first, middle and last name, email, mobile, address |
+| `company_members` | A user's membership in a company: worker ID, engagement type (PAYE, Sub-Contractor, Contractor) and role flags |
 | `sessions` | Hashed session tokens with expiry |
-| `projects`, `job_roles` | What workers clock against |
+| `clients` | The client list chosen from when setting up projects |
+| `projects`, `job_roles` | What workers clock against. A project also holds its client, principal, type, description, address, SIN and start and end dates |
 | `worker_projects`, `worker_job_roles` | Which projects and roles each worker may use |
 | `manager_assignments` | The **only** source of a manager's scope (primary or cover) |
 | `costmaster_grants`, `support_grants` | Separate CostMaster and IT access |
-| `rates` | Effective-dated hourly rates at four specificity levels |
+| `rates` | Effective-dated hourly or day rates at four specificity levels |
 | `timesheets` | One per worker per week: status, current version, approved version |
 | `timesheet_versions` | Frozen snapshots with totals and return/approval stamps |
 | `timesheet_comments` | Comments, correction requests, return and reopen notes |
-| `work_entries` | One shift (or one piece of a split shift): times, seconds, rate, value, status |
+| `work_entries` | One shift (or one piece of a split shift): times, unpaid break minutes, paid seconds, work-done comment, rate and rate unit, value, status |
 | `entry_revisions` | Before/after history of every correction, void and split |
 | `exports`, `export_items` | Record of every CSV download |
 | `audit_log`, `error_log` | Who did what, and unexpected errors for IT |

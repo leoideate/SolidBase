@@ -1,10 +1,10 @@
 # Administrator guide
 
 ## First-time setup
-1. **Projects** (Admin → Projects). Add a unique code (e.g. `P004`), a name, and an optional site reference. Making a project inactive hides it from clocking but keeps its history.
+1. **Clients and projects** (Admin → Projects). First add your clients at the bottom of the page. Then add each project: client, principal, project type, a unique Project ID (e.g. `P004`), name, description, full address, SIN and start and end dates. Making a project inactive hides it from clocking but keeps its history.
 2. **Roles** (Admin → Roles). Add the work roles workers choose when clocking in, such as *Dumper driver*.
-3. **Rates** (Admin → Rates). Add a *role standard* rate for every role. Add worker-specific, project-specific or worker+project overrides only where an agreed rate differs.
-4. **Users** (Admin → Users → Add user). Enter a name, a stable worker ID, a username and a temporary 6-digit PIN, then tick the access roles.
+3. **Rates** (Admin → Rates). Add a *role standard* rate for every role, per hour or per day. Add worker-specific, project-specific or worker+project overrides only where an agreed rate differs.
+4. **Users** (Admin → Users → Add user). Enter first, middle and last name, contact details and engagement type, a username and a temporary 6-digit PIN, then tick the access roles. Leave Worker ID empty to get the next one automatically (W001, W002…). Bank details are not stored.
 5. **On each worker's page:**
    - tick the projects and roles they may clock against;
    - assign their manager (primary, plus any cover managers).

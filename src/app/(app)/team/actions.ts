@@ -5,8 +5,17 @@ import type { ActionState } from "@/server/action";
 import { AppError } from "@/server/errors";
 import { addEntry, correctEntry, voidEntry } from "@/server/services/corrections";
 import { addCrewWorker, enterCrewHours, setCrewAllocations } from "@/server/services/crew";
+import { personFromForm } from "@/server/services/people";
 import { submitOnBehalf, approveTimesheet, reopenTimesheet, returnTimesheet } from "@/server/services/timesheets";
 import { parseLocalDateTime } from "@/lib/time";
+
+/** Whole minutes from a form field; blank means 0. */
+function minutes(fd: FormData, key: string) {
+  const raw = str(fd, key).trim();
+  if (!raw) return 0;
+  if (!/^\d{1,3}$/.test(raw)) throw new AppError("Break minutes must be a whole number.");
+  return Number(raw);
+}
 
 function times(fd: FormData, requireEnd: boolean) {
   const startAt = parseLocalDateTime(str(fd, "startAt"));
@@ -21,7 +30,12 @@ function times(fd: FormData, requireEnd: boolean) {
 export async function correctAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
     const { startAt, endAt } = times(fd, false);
-    await correctEntry(actor, str(fd, "entryId"), { projectId: str(fd, "projectId"), jobRoleId: str(fd, "jobRoleId"), startAt, endAt }, str(fd, "reason"));
+    await correctEntry(
+      actor,
+      str(fd, "entryId"),
+      { projectId: str(fd, "projectId"), jobRoleId: str(fd, "jobRoleId"), startAt, endAt, breakMinutes: minutes(fd, "breakMinutes"), note: str(fd, "note") },
+      str(fd, "reason"),
+    );
     return "Correction saved. The worker can see the original and revised values.";
   }, { revalidate: "/team" });
 }
@@ -29,7 +43,12 @@ export async function correctAction(_: ActionState, fd: FormData): Promise<Actio
 export async function addEntryAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
     const { startAt, endAt } = times(fd, true);
-    await addEntry(actor, str(fd, "workerId"), { projectId: str(fd, "projectId"), jobRoleId: str(fd, "jobRoleId"), startAt, endAt: endAt! }, str(fd, "reason"));
+    await addEntry(
+      actor,
+      str(fd, "workerId"),
+      { projectId: str(fd, "projectId"), jobRoleId: str(fd, "jobRoleId"), startAt, endAt: endAt!, breakMinutes: minutes(fd, "breakMinutes"), note: str(fd, "note") },
+      str(fd, "reason"),
+    );
     return "Entry added.";
   }, { revalidate: "/team" });
 }
@@ -73,7 +92,7 @@ export async function adminSubmitAction(_: ActionState, fd: FormData): Promise<A
 export async function addCrewWorkerAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
     await addCrewWorker(actor, {
-      displayName: str(fd, "displayName"),
+      person: personFromForm(fd),
       workerCode: str(fd, "workerCode"),
       projectIds: fd.getAll("projectIds").map(String),
       jobRoleIds: fd.getAll("jobRoleIds").map(String),
@@ -96,7 +115,14 @@ export async function crewHoursAction(_: ActionState, fd: FormData): Promise<Act
       .getAll("workerId")
       .map(String)
       .filter((id) => bool(fd, `on_${id}`))
-      .map((id) => ({ workerId: id, jobRoleId: str(fd, `role_${id}`), start: str(fd, `start_${id}`), end: str(fd, `end_${id}`) }));
+      .map((id) => ({
+        workerId: id,
+        jobRoleId: str(fd, `role_${id}`),
+        start: str(fd, `start_${id}`),
+        end: str(fd, `end_${id}`),
+        breakMinutes: minutes(fd, `break_${id}`),
+        note: str(fd, `note_${id}`),
+      }));
     const n = await enterCrewHours(actor, { date: str(fd, "date"), projectId: str(fd, "projectId"), rows });
     return `Saved hours for ${n} worker${n === 1 ? "" : "s"}.`;
   }, { revalidate: "/team" });

@@ -1,7 +1,7 @@
 import { breakdown, entryFlags, totals } from "@/server/services/views";
 import type { EntryRow } from "@/server/services/views";
 import { fmtDateTime, fmtTime, localDate, fmtDate } from "@/lib/time";
-import { fmtMoney, hours } from "@/lib/money";
+import { fmtMoney, hours, fmtRate } from "@/lib/money";
 import { FlagBadge, Hours, Money, Stat, StatusBadge } from "./ui";
 
 type WeekData = Awaited<ReturnType<typeof import("@/server/services/views").workerWeek>>;
@@ -48,7 +48,7 @@ export function BreakdownTable({ entries }: { entries: EntryRow[] }) {
               </td>
               <td>{r.roleName}</td>
               <td className="num"><Hours s={r.seconds} /></td>
-              <td className="num">{r.rate ? fmtMoney(r.rate) : <span className="text-red-700">No rate</span>}</td>
+              <td className="num whitespace-nowrap">{r.rate ? fmtRate(r.rate, r.rateUnit) : <span className="text-red-700">No rate</span>}</td>
               <td className="num"><Money v={r.value} /></td>
             </tr>
           ))}
@@ -94,8 +94,10 @@ export function EntriesList({
             </div>
             <div className="mt-2 text-sm">
               <span className="font-medium">{e.projectCode}</span> · {e.roleName}
-              {e.appliedRate && <span className="text-slate-500"> · {fmtMoney(e.appliedRate)}/h</span>}
+              {e.appliedRate && <span className="text-slate-500"> · {fmtRate(e.appliedRate, e.rateUnit)}</span>}
+              {e.breakMinutes > 0 && <span className="text-slate-500"> · {e.breakMinutes} min break</span>}
             </div>
+            {e.note && <p className="mt-1 text-sm text-slate-700">“{e.note}”</p>}
             <EntryBadges e={e} longShiftHours={longShiftHours} />
             {renderActions && <div className="mt-2">{renderActions(e)}</div>}
           </li>
@@ -123,9 +125,15 @@ export function EntriesList({
                 <td>{fmtTime(e.startAt)}</td>
                 <td>{e.endAt ? fmtTime(e.endAt) : <StatusBadge status="open" />}</td>
                 <td title={e.projectName}>{e.projectCode}</td>
-                <td>{e.roleName}</td>
-                <td className="num">{e.durationSeconds != null ? hours(e.durationSeconds) : "—"}</td>
-                <td className="num">{e.appliedRate ? fmtMoney(e.appliedRate) : "—"}</td>
+                <td>
+                  {e.roleName}
+                  {e.note && <div className="max-w-56 text-xs text-slate-500">“{e.note}”</div>}
+                </td>
+                <td className="num">
+                  {e.durationSeconds != null ? hours(e.durationSeconds) : "—"}
+                  {e.breakMinutes > 0 && <div className="text-xs text-slate-500">−{e.breakMinutes} min break</div>}
+                </td>
+                <td className="num whitespace-nowrap">{e.appliedRate ? fmtRate(e.appliedRate, e.rateUnit) : "—"}</td>
                 <td className="num"><Money v={e.value} /></td>
                 <td>
                   <EntryBadges e={e} longShiftHours={longShiftHours} />

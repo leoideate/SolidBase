@@ -3,7 +3,7 @@ import { requireActor } from "@/server/auth/session";
 import { listMembers, listRates, rateProblems } from "@/server/services/admin-views";
 import { companyLookups } from "@/server/services/views";
 import { SPECIFICITY_LABEL, specificity } from "@/server/services/rates";
-import { fmtMoney } from "@/lib/money";
+import { fmtRate } from "@/lib/money";
 import { fmtDateTime, localDate } from "@/lib/time";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { FlagBadge, PageHeader } from "@/components/ui";
@@ -11,7 +11,7 @@ import { addRateAction, endRateAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-/** F04: agreed hourly worker rates in EUR with effective dates and worker/project overrides. */
+/** F04: agreed hourly or day worker rates in EUR with effective dates and worker/project overrides. */
 export default async function RatesPage() {
   const actor = await requireActor();
   const [rates, problems, { projects, roles }, members] = await Promise.all([listRates(actor), rateProblems(actor), companyLookups(actor.companyId), listMembers(actor)]);
@@ -61,7 +61,7 @@ export default async function RatesPage() {
                     <div className="font-semibold">{SPECIFICITY_LABEL[specificity(r)]}</div>
                     {[workerName, projectCode].filter(Boolean).join(" · ")}
                   </td>
-                  <td className="num font-semibold">{fmtMoney(r.hourlyRate)}</td>
+                  <td className="num font-semibold whitespace-nowrap">{fmtRate(r.hourlyRate, r.unit)}</td>
                   <td className="whitespace-nowrap">{r.effectiveFrom}</td>
                   <td className="whitespace-nowrap">{r.effectiveTo ?? "—"}</td>
                   <td>
@@ -85,7 +85,7 @@ export default async function RatesPage() {
 
       <section className="card">
         <h2 className="h2 mb-1">Add rate</h2>
-        <p className="muted mb-3">To change a rate, add a new one with a later effective date; it supersedes the earlier rate at the same level. Approved entries keep the rate they were approved with.</p>
+        <p className="muted mb-3">To change a rate, add a new one with a later effective date; it supersedes the earlier rate at the same level. Approved entries keep the rate they were approved with. A day rate pays the agreed amount for each day worked, whatever the hours; two day-rate entries on the same day must be combined before approval.</p>
         <ActionForm action={addRateAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" resetOnSuccess>
           <div>
             <label className="label">Role</label>
@@ -115,8 +115,14 @@ export default async function RatesPage() {
             </select>
           </div>
           <div>
-            <label className="label">Hourly rate (EUR)</label>
-            <input name="hourlyRate" className="input" inputMode="decimal" placeholder="28.00" required />
+            <label className="label">Agreed pay rate (EUR)</label>
+            <div className="flex gap-2">
+              <input name="hourlyRate" className="input flex-1" inputMode="decimal" placeholder="28.00" aria-label="Amount" required />
+              <select name="unit" className="input w-32" defaultValue="hour" aria-label="Rate type">
+                <option value="hour">per hour</option>
+                <option value="day">per day</option>
+              </select>
+            </div>
           </div>
           <div>
             <label className="label">Effective from</label>

@@ -33,7 +33,10 @@ async function entriesForTimesheets(timesheetIds: string[]) {
       startAt: e.startAt,
       endAt: e.endAt,
       durationSeconds: e.durationSeconds,
+      breakMinutes: e.breakMinutes,
+      note: e.note,
       appliedRate: e.appliedRate,
+      rateUnit: e.rateUnit,
       currency: e.currency,
       value: e.value,
       rateStatus: e.rateStatus,
@@ -65,15 +68,15 @@ export function entryFlags(row: Pick<EntryRow, "status" | "startAt" | "durationS
   return flags;
 }
 
-export type Breakdown = { projectCode: string; projectName: string; roleName: string; seconds: number; rate: string | null; value: string | null };
+export type Breakdown = { projectCode: string; projectName: string; roleName: string; seconds: number; rate: string | null; rateUnit: "hour" | "day"; value: string | null };
 
 /** Summary by project, role and rate. The CSV keeps individual entries; this is display only (ARD p.6). */
 export function breakdown(rows: EntryRow[]): Breakdown[] {
   const map = new Map<string, Breakdown & { values: (string | null)[] }>();
   for (const r of rows) {
     if (r.status !== "closed") continue;
-    const k = `${r.projectCode}|${r.roleCode}|${r.appliedRate}`;
-    const cur = map.get(k) ?? { projectCode: r.projectCode, projectName: r.projectName, roleName: r.roleName, seconds: 0, rate: r.appliedRate, value: null, values: [] };
+    const k = `${r.projectCode}|${r.roleCode}|${r.appliedRate}|${r.rateUnit}`;
+    const cur = map.get(k) ?? { projectCode: r.projectCode, projectName: r.projectName, roleName: r.roleName, seconds: 0, rate: r.appliedRate, rateUnit: r.rateUnit, value: null, values: [] };
     cur.seconds += r.durationSeconds ?? 0;
     cur.values.push(r.value);
     map.set(k, cur);
@@ -273,7 +276,10 @@ export async function approvedEntries(p: { companyId: string; workerIds?: string
       startAt: e.startAt,
       endAt: e.endAt,
       durationSeconds: e.durationSeconds,
+      breakMinutes: e.breakMinutes,
+      note: e.note,
       appliedRate: e.appliedRate,
+      rateUnit: e.rateUnit,
       currency: e.currency,
       value: e.value,
       approvedAt: schema.timesheetVersions.approvedAt,

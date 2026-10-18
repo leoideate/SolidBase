@@ -21,8 +21,8 @@ export default async function AdminHome() {
       <div className="grid gap-3 md:grid-cols-3">
         {[
           ["/admin/users", "Users and access", "Create accounts, reset PINs, set roles, assign workers to managers, grant CostMaster."],
-          ["/admin/projects", "Projects", "Project codes, names, site references and active status."],
-          ["/admin/rates", "Rates", "Agreed hourly worker rates in EUR with effective dates and overrides."],
+          ["/admin/projects", "Projects", "Clients, projects, addresses, SIN, project types and dates."],
+          ["/admin/rates", "Rates", "Agreed hourly or day rates in EUR with effective dates and overrides."],
           ["/admin/support", "IT support access", "Authorise and revoke time-limited support access."],
           ["/admin/settings", "Settings", "Long-shift flag threshold and manager CSV export."],
           ["/admin/audit", "Audit log", "Who changed permissions, assignments, rates and approvals."],

@@ -17,7 +17,7 @@ beforeEach(async () => {
 });
 
 async function addJoe() {
-  return addCrewWorker(m().sean, { displayName: "Joe Nolan", workerCode: "W010", projectIds: [s.projects.P001.id], jobRoleIds: [s.roles.DUMP.id] });
+  return addCrewWorker(m().sean, { person: { firstName: "Joe", lastName: "Nolan", engagementType: "paye" }, workerCode: "W010", projectIds: [s.projects.P001.id], jobRoleIds: [s.roles.DUMP.id] });
 }
 
 describe("supervisor crew", () => {
@@ -38,7 +38,7 @@ describe("supervisor crew", () => {
   });
 
   it("workers can't add workers, and worker IDs stay unique", async () => {
-    await expect(addCrewWorker(m().pat, { displayName: "X", workerCode: "W011", projectIds: [], jobRoleIds: [s.roles.DUMP.id] })).rejects.toThrow(/Supervisor/);
+    await expect(addCrewWorker(m().pat, { person: { firstName: "X", lastName: "Y" }, workerCode: "W011", projectIds: [], jobRoleIds: [s.roles.DUMP.id] })).rejects.toThrow(/Supervisor/);
     await addJoe();
     await expect(addJoe()).rejects.toThrow(/already in use/);
   });

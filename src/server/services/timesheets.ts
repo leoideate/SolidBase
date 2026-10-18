@@ -5,7 +5,7 @@ import type { Actor } from "../actor";
 import { assertCanManageWorker } from "../authz";
 import { AppError, Forbidden, NotFound } from "../errors";
 import { sumMoney } from "@/lib/money";
-import { weekEndInstant } from "@/lib/time";
+import { localDate, weekEndInstant } from "@/lib/time";
 import { audit } from "./audit";
 import { priceEntry } from "./rates";
 
@@ -38,7 +38,10 @@ export type SnapshotEntry = {
   startAt: string;
   endAt: string | null;
   durationSeconds: number | null;
+  breakMinutes?: number;
+  note?: string | null;
   rateId: string | null;
+  rateUnit?: string;
   appliedRate: string | null;
   value: string | null;
   rateStatus: string;
@@ -60,7 +63,10 @@ export async function buildSnapshot(tx: DbOrTx, timesheetId: string) {
     startAt: e.startAt.toISOString(),
     endAt: e.endAt?.toISOString() ?? null,
     durationSeconds: e.durationSeconds,
+    breakMinutes: e.breakMinutes,
+    note: e.note,
     rateId: e.rateId,
+    rateUnit: e.rateUnit,
     appliedRate: e.appliedRate,
     value: e.value,
     rateStatus: e.rateStatus,
@@ -214,6 +220,10 @@ export async function approvalBlockers(tx: DbOrTx, actor: Actor, ts: Timesheet):
   if (entries.some((e) => e.status === "open")) out.push({ code: "open", message: "An entry has no clock out." });
   if (entries.some((e) => e.rateStatus === "missing")) out.push({ code: "rate_missing", message: "An entry has no applicable rate. Ask admin to set one." });
   if (entries.some((e) => e.rateStatus === "conflict")) out.push({ code: "rate_conflict", message: "An entry has conflicting rates. Admin must resolve them." });
+  const dayRateDates = entries.filter((e) => e.status === "closed" && e.rateUnit === "day").map((e) => localDate(e.startAt));
+  if (new Set(dayRateDates).size < dayRateDates.length) {
+    out.push({ code: "day_rate_twice", message: "Two day-rate entries fall on the same day, so the day rate would be paid twice. Combine them or remove one." });
+  }
   return out;
 }
 
@@ -221,7 +231,7 @@ export async function approvalBlockers(tx: DbOrTx, actor: Actor, ts: Timesheet):
 function sameSnapshot(a: Snapshot, b: Snapshot) {
   const canon = (s: Snapshot) =>
     JSON.stringify(
-      s.entries.map((e) => [e.id, e.projectId, e.jobRoleId, e.startAt, e.endAt, e.durationSeconds, e.rateId, e.appliedRate, e.value, e.rateStatus, e.status]),
+      s.entries.map((e) => [e.id, e.projectId, e.jobRoleId, e.startAt, e.endAt, e.durationSeconds, e.breakMinutes ?? 0, e.rateId, e.rateUnit ?? "hour", e.appliedRate, e.value, e.rateStatus, e.status]),
     );
   return canon(a) === canon(b);
 }

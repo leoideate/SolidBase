@@ -45,6 +45,21 @@ function AllocationFields({ lookups, projectId, jobRoleId }: { lookups: Lookups;
   );
 }
 
+function WorkFields({ breakMinutes = 0, note }: { breakMinutes?: number; note?: string | null }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[8rem_1fr]">
+      <div>
+        <label className="label">Unpaid break (min)</label>
+        <input name="breakMinutes" type="number" min={0} max={600} step={1} className="input" defaultValue={breakMinutes} />
+      </div>
+      <div>
+        <label className="label">Work done (comment)</label>
+        <input name="note" className="input" defaultValue={note ?? ""} placeholder="e.g. Kerb laying, Block C" />
+      </div>
+    </div>
+  );
+}
+
 function EntryActions({ e, lookups }: { e: EntryRow; lookups: Lookups }) {
   return (
     <details className="group mt-1">
@@ -63,6 +78,7 @@ function EntryActions({ e, lookups }: { e: EntryRow; lookups: Lookups }) {
               <input type="datetime-local" name="endAt" className="input" defaultValue={toLocalInput(e.endAt)} required={e.status === "closed"} />
             </div>
           </div>
+          <WorkFields breakMinutes={e.breakMinutes} note={e.note} />
           <input name="reason" className="input" placeholder="Reason (required)" required />
           <SubmitButton className="btn-primary btn-sm">Save correction</SubmitButton>
         </ActionForm>
@@ -146,6 +162,7 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
                   <input type="datetime-local" name="endAt" className="input" defaultValue={`${days[0]}T15:00`} required />
                 </div>
               </div>
+              <WorkFields />
               <input name="reason" className="input" placeholder="Reason (required), e.g. phone had no signal" required />
               <SubmitButton className="btn-primary btn-sm">Add entry</SubmitButton>
             </ActionForm>

@@ -4,14 +4,23 @@ import type { Tx } from "../db";
 import type { Actor } from "../actor";
 import { assertCanManageWorker } from "../authz";
 import { AppError, NotFound, pgCode, pgMessage } from "../errors";
-import { elapsedSeconds, weekStartOf } from "@/lib/time";
+import { elapsedSeconds, paidSeconds, weekStartOf } from "@/lib/time";
 import { audit } from "./audit";
 import { priceEntry } from "./rates";
 import { ensureTimesheet, lockTimesheet, versionAfterCorrection } from "./timesheets";
 
 type Entry = typeof schema.workEntries.$inferSelect;
 
-export type EntryInput = { projectId: string; jobRoleId: string; startAt: Date; endAt: Date | null };
+export type EntryInput = {
+  projectId: string;
+  jobRoleId: string;
+  startAt: Date;
+  endAt: Date | null;
+  /** Unpaid break deducted from the paid time (supervisor-entered). */
+  breakMinutes?: number;
+  /** What work was done. */
+  note?: string | null;
+};
 
 const fields = (e: Entry) => ({
   projectId: e.projectId,
@@ -19,6 +28,8 @@ const fields = (e: Entry) => ({
   startAt: e.startAt,
   endAt: e.endAt,
   durationSeconds: e.durationSeconds,
+  breakMinutes: e.breakMinutes,
+  note: e.note,
   appliedRate: e.appliedRate,
   value: e.value,
   status: e.status,
@@ -38,11 +49,14 @@ async function validateAllocation(tx: Tx, actor: Actor, projectId: string, jobRo
   if (!r) throw new AppError("Unknown role.");
 }
 
-function validateTimes(startAt: Date, endAt: Date | null) {
+function validateTimes(startAt: Date, endAt: Date | null, breakMinutes = 0) {
   const now = new Date();
+  if (!Number.isInteger(breakMinutes) || breakMinutes < 0) throw new AppError("Break minutes must be a whole number, 0 or more.");
+  if (breakMinutes > 0 && !endAt) throw new AppError("Add the end time before recording a break.");
   if (startAt > now) throw new AppError("Start time cannot be in the future.");
   if (endAt) {
     if (endAt <= startAt) throw new AppError("End time must be after start time.");
+    if (breakMinutes * 60 >= elapsedSeconds(startAt, endAt)) throw new AppError("The break must be shorter than the shift.");
     if (endAt > now) throw new AppError("End time cannot be in the future.");
     // Entries never span a weekly boundary; a correction that would cross one must be two entries.
     if (weekStartOf(startAt) !== weekStartOf(new Date(endAt.getTime() - 1))) {
@@ -85,13 +99,14 @@ export async function correctEntry(actor: Actor, entryId: string, input: EntryIn
       if (currentTs.status === "approved") throw new AppError("That week is approved. Reopen it before correcting.");
       if (entry.status === "closed" && !input.endAt) throw new AppError("A closed entry needs an end time.");
       await validateAllocation(tx, actor, input.projectId, input.jobRoleId);
-      validateTimes(input.startAt, input.endAt);
+      const breakMinutes = input.breakMinutes ?? 0;
+      validateTimes(input.startAt, input.endAt, breakMinutes);
 
       const target = await targetTimesheet(tx, actor, entry.workerId, input.startAt);
-      const durationSeconds = input.endAt ? elapsedSeconds(input.startAt, input.endAt) : null;
+      const durationSeconds = input.endAt ? paidSeconds(input.startAt, input.endAt, breakMinutes) : null;
       const pricing = durationSeconds != null
         ? await priceEntry(tx, { ...entry, ...input, durationSeconds })
-        : { rateId: null, appliedRate: null, value: null, rateStatus: "pending" as const };
+        : { rateId: null, appliedRate: null, rateUnit: "hour" as const, value: null, rateStatus: "pending" as const };
       const [updated] = await tx
         .update(schema.workEntries)
         .set({
@@ -100,6 +115,8 @@ export async function correctEntry(actor: Actor, entryId: string, input: EntryIn
           startAt: input.startAt,
           endAt: input.endAt,
           durationSeconds,
+          breakMinutes,
+          note: input.note === undefined ? entry.note : input.note?.trim() || null,
           status: input.endAt ? "closed" : "open",
           timesheetId: target.id,
           ...pricing,
@@ -144,9 +161,10 @@ export async function addEntry(actor: Actor, workerId: string, input: EntryInput
 export async function insertManagerEntry(tx: Tx, actor: Actor, workerId: string, input: EntryInput & { endAt: Date }, reason: string) {
   await assertCanManageWorker(tx, actor, workerId);
   await validateAllocation(tx, actor, input.projectId, input.jobRoleId);
-  validateTimes(input.startAt, input.endAt);
+  const breakMinutes = input.breakMinutes ?? 0;
+  validateTimes(input.startAt, input.endAt, breakMinutes);
   const ts = await targetTimesheet(tx, actor, workerId, input.startAt);
-  const durationSeconds = elapsedSeconds(input.startAt, input.endAt);
+  const durationSeconds = paidSeconds(input.startAt, input.endAt, breakMinutes);
   const pricing = await priceEntry(tx, { companyId: actor.companyId, workerId, ...input, durationSeconds });
   const [entry] = await tx
     .insert(schema.workEntries)
@@ -159,6 +177,8 @@ export async function insertManagerEntry(tx: Tx, actor: Actor, workerId: string,
       startAt: input.startAt,
       endAt: input.endAt,
       durationSeconds,
+      breakMinutes,
+      note: input.note?.trim() || null,
       status: "closed",
       source: "manager",
       ...pricing,

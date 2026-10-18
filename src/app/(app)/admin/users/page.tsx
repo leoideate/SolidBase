@@ -5,6 +5,7 @@ import { ActionForm, SubmitButton } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
 import { createUserAction } from "../actions";
 import { RoleCheckboxes } from "@/components/role-checkboxes";
+import { PersonFields } from "@/components/person-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -49,15 +50,8 @@ export default async function UsersPage() {
       <section className="card">
         <h2 className="h2 mb-3">Add user</h2>
         <ActionForm action={createUserAction} className="space-y-3" resetOnSuccess>
+          <PersonFields />
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="label">Full name</label>
-              <input name="displayName" className="input" required />
-            </div>
-            <div>
-              <label className="label">Worker ID (stable)</label>
-              <input name="workerCode" className="input" placeholder="e.g. W004" required />
-            </div>
             <div>
               <label className="label">Username (login)</label>
               <input name="username" className="input" autoCapitalize="none" placeholder="e.g. john.smith" required />

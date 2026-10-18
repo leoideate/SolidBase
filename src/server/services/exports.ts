@@ -23,14 +23,17 @@ export const CSV_COLUMNS = [
   "Work date",
   "Clock in",
   "Clock out",
+  "Unpaid break minutes",
   "Decimal hours",
   "Duration seconds",
-  "Applied hourly rate",
+  "Agreed pay rate",
+  "Rate type",
   "Currency",
   "Timesheet value",
   "Approval status",
   "Approved by",
   "Approval timestamp",
+  "Comment",
 ];
 
 /** RFC 4180 quoting plus spreadsheet formula-injection protection. */
@@ -80,14 +83,17 @@ export async function buildExport(actor: Actor, f: ExportFilters) {
         localDate(r.startAt),
         isoWithOffset(r.startAt),
         r.endAt ? isoWithOffset(r.endAt) : "",
+        r.breakMinutes,
         hours(r.durationSeconds ?? 0),
         r.durationSeconds ?? 0,
         r.appliedRate,
+        r.rateUnit === "day" ? "Day" : "Hourly",
         r.currency,
         r.value,
         "Approved",
         r.approvedByName,
         r.approvedAt ? isoWithOffset(r.approvedAt) : "",
+        r.note ?? "",
       ]
         .map(csvCell)
         .join(","),

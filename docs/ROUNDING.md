@@ -15,10 +15,11 @@ The ARD (p.6) requires this policy to be documented before implementation. It is
 
 ## Rounding
 - The exact duration is stored in whole seconds and never changes as a result of rounding.
-- **Entry value = (seconds ÷ 3600) × hourly rate**, rounded **half-up to the cent**, per entry.
+- **Entry value = (paid seconds ÷ 3600) × hourly rate**, rounded **half-up to the cent**, per entry (or the day amount for a day rate).
 - **Totals are sums of the rounded entry values.** Dashboards, CostMaster and CSV all use the same values, so their totals always reconcile (T07).
 - Hours are shown to **2 decimals**. The CSV also includes `Duration seconds` so you can reconcile exactly.
-- No time is rounded to 15-minute steps, and breaks are never deducted automatically (F09). For an unpaid break, the worker clocks out and back in.
+- No time is rounded to 15-minute steps, and breaks are never deducted automatically (F09). A worker clocking themselves clocks out and back in for an unpaid break. A supervisor entering hours records the **unpaid break minutes**, and the stored duration is the paid time: elapsed seconds minus the break.
+- **Day rates:** an entry priced at a day rate is worth the agreed day amount, whatever its hours. Hours are still recorded and shown.
 - Worked example (ARD p.6): 20 h × €28 + 15 h × €30 + 5 h × €25 = €560 + €450 + €125 = **€1,135.00** for **40.00 h**.
 
 The value is hours × agreed rate **before deductions**. It is not a payroll calculation and not a payment confirmation.

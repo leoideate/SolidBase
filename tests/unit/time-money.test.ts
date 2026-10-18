@@ -73,6 +73,7 @@ describe("rate resolution", () => {
     workerId: o.workerId ?? null,
     projectId: o.projectId ?? null,
     hourlyRate: o.amount ?? "25.00",
+    unit: "hour" as const,
     effectiveFrom: o.from ?? "2026-01-01",
   });
 
