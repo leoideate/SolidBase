@@ -12,7 +12,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "admin:create": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@date-fns/tz": "1.4.1",
@@ -38,5 +39,8 @@
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

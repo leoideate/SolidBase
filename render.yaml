@@ -1,0 +1,36 @@
+# Render Blueprint: one Node web service and one managed PostgreSQL 16 database, both in Frankfurt (EU).
+# Render → New → Blueprint → pick this repository. See docs/DEPLOYMENT.md ("Deploying on Render").
+databases:
+  - name: site-attendance-db
+    region: frankfurt
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    databaseName: attendance
+    user: attendance
+    # No public access: only services in the same Render account and region can connect.
+    ipAllowList: []
+
+services:
+  - type: web
+    name: site-attendance
+    runtime: node
+    region: frankfurt
+    plan: starter
+    # pnpm is fetched at a pinned version (keep in step with the version used locally: pnpm --version).
+    buildCommand: npx --yes pnpm@12.4.1 install --frozen-lockfile && npx --yes pnpm@12.4.1 build
+    # Runs before each deploy goes live; a failed migration stops the deploy.
+    preDeployCommand: npx --yes pnpm@12.4.1 db:migrate
+    startCommand: node_modules/.bin/next start -p $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: site-attendance-db
+          property: connectionString
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: APP_TIMEZONE
+        value: Europe/Dublin
