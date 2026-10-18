@@ -158,20 +158,23 @@ export async function submitTimesheet(actor: Actor, timesheetId: string, comment
   });
 }
 
-/** Admin submits on a worker's behalf with a reason (e.g. worker unavailable). Not for self. */
-export async function adminSubmitTimesheet(actor: Actor, timesheetId: string, reason: string) {
-  if (!actor.isAdmin) throw new Forbidden("Administrator access required.");
+/**
+ * Admin, or the worker's own supervisor, submits on the worker's behalf with a reason: the worker
+ * is unavailable or has no app login because the supervisor records their hours. Not for self.
+ */
+export async function submitOnBehalf(actor: Actor, timesheetId: string, reason: string) {
   if (!reason.trim()) throw new AppError("A reason is required.");
   return db.transaction(async (tx) => {
     const ts = await lockTimesheet(tx, timesheetId, actor.companyId);
     if (ts.workerId === actor.memberId) throw new AppError("Submit your own timesheet from your worker view.");
+    await assertCanManageWorker(tx, actor, ts.workerId);
     if (ts.status !== "draft" && ts.status !== "returned") throw new AppError("This timesheet has already been submitted.");
     if (new Date() < weekEndInstant(ts.weekStart)) throw new AppError("The week has not ended yet.");
     if ((await openEntryCount(tx, ts.id)) > 0) throw new AppError("Close or correct the open entry first.");
     await refreshPricing(tx, ts.id);
     const v = await createVersion(tx, actor, ts, "admin_submitted", reason.trim());
     await tx.update(schema.timesheets).set({ status: "submitted" }).where(eq(schema.timesheets.id, ts.id));
-    await audit(tx, actor, "timesheet.admin_submitted", "timesheet", ts.id, { version: v, reason });
+    await audit(tx, actor, "timesheet.submitted_on_behalf", "timesheet", ts.id, { version: v, reason });
     return v;
   });
 }

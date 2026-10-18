@@ -92,7 +92,7 @@ export function totals(rows: EntryRow[]) {
 export async function workerWeek(actor: Actor, workerId: string, weekStart: string) {
   await assertCanReadWorker(db, actor, workerId);
   const [worker] = await db
-    .select({ id: schema.companyMembers.id, name: schema.users.displayName, workerCode: schema.companyMembers.workerCode })
+    .select({ id: schema.companyMembers.id, name: schema.users.displayName, workerCode: schema.companyMembers.workerCode, hasPin: sql<boolean>`${schema.users.pinHash} is not null` })
     .from(schema.companyMembers)
     .innerJoin(schema.users, eq(schema.users.id, schema.companyMembers.userId))
     .where(eq(schema.companyMembers.id, workerId));

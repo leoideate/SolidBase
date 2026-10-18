@@ -10,6 +10,7 @@ Each setting below was confirmed with the business owner's representative before
 | Period boundary | Shifts crossing Monday 00:00 are split into two linked entries at clock-out. |
 | Breaks | The worker clocks out and back in. There is no automatic deduction. |
 | Rounding | See [ROUNDING.md](ROUNDING.md): exact seconds, value rounded half-up per entry, 2-decimal hours. |
+| Supervisor crew | Supervisors add workers to their own crew, set their roles and projects, and enter crew hours by day and project. They submit on the worker's behalf and approve. Workers added this way have no app login until admin sets a PIN. |
 | Login | Username plus a 6-digit PIN. Admin sets a temporary PIN and the worker must change it on first login. After 5 failed attempts the account locks for 15 minutes. Recovery is an admin PIN reset; there is no email or SMS. Logging in never clocks in, and logging out never clocks out. |
 | Rates | Agreed worker rates in EUR with effective dates. The most specific rate wins: **worker+project > worker > project > role standard**. At the same level, the latest effective-from wins. Two rates at the same level on the same date are a *conflict*, which blocks approval until admin resolves it. A missing rate is flagged, but the worker can still record time. Only admin configures rates. |
 | Rate changes | New rates re-price **unapproved** entries only. If a submitted timesheet changes as a result, approval creates a new version for the manager to review. Approved values are never rewritten. |

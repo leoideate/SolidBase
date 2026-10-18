@@ -60,7 +60,7 @@ One login (`users`) can belong to a company as a **member** (`company_members`).
 | Role | What they do | Home screen |
 |---|---|---|
 | **Worker** | Clock in and out, view their weeks, submit timesheets, comment | `/clock` |
-| **Manager** | Review, correct, return and approve the timesheets of *assigned* workers | `/team` |
+| **Manager / supervisor** | Add workers to their crew and set their roles, enter crew hours, and review, correct, return and approve the timesheets of *assigned* workers | `/team` |
 | **Admin** | Setup: users, projects, roles, rates, assignments, settings, grants. Can manage every worker in the company | `/admin` |
 | **IT** | System health and error log only. Can't be combined with admin or manager | `/system` |
 | **CostMaster** | Not a flag. It's a separate grant for all projects or named ones, optionally with export. Read-only | `/costs` |
@@ -183,7 +183,7 @@ Every submission, resubmission, admin submission, manager correction, reopen or 
 
 `submitTimesheet()` checks that the timesheet belongs to the worker and is draft or returned. It also checks that **the week has ended** (`weekEndInstant`), so no more entries can land in it, and that no shift is still open. It then refreshes pricing, freezes a new version and sets the status to `submitted`.
 
-Overdue drafts (the week has ended but the timesheet wasn't submitted) appear in the manager's queue. An admin can submit one on the worker's behalf with a reason (`adminSubmitTimesheet`).
+Overdue drafts (the week has ended but the timesheet wasn't submitted) appear in the manager's queue. An admin, or the worker's own supervisor, can submit one on the worker's behalf with a reason (`submitOnBehalf`).
 
 ### Return
 
@@ -229,6 +229,17 @@ Every correction:
 - creates a new timesheet version if the timesheet was already submitted (`versionAfterCorrection`), so the manager approves what was actually changed.
 
 The manager queue (`managerQueue` in `views.ts`) groups timesheets into *submitted*, *issues*, *overdue* and *returned*. It also flags entries for attention (`entryFlags`): *Missing clock out* (an entry still open from an earlier week, or open longer than the long-shift threshold), *Over N h* (a closed shift longer than the threshold, 14 h by default), and *No rate* / *Rate conflict*. Hours are never cut automatically.
+
+### Supervisor crew and crew hours
+
+Code: `src/server/services/crew.ts`, screens `/team/crew` and `/team/hours`
+
+Supervisors (managers) can run their crew without every worker using the app:
+
+1. **My crew** (`/team/crew`). The supervisor adds a worker with a name, a worker ID, their roles and their projects (`addCrewWorker`). The worker is assigned to that supervisor automatically, and nobody else's crew is affected. The supervisor can change a crew member's roles and projects at any time (`setCrewAllocations`).
+2. **No PIN until admin gives one.** A worker added by a supervisor has no PIN (`users.pin_hash` is NULL), so they can't log in. Only admin can give app access, using **Set PIN** on the user's page. The login name is `w.<worker id>`, shown on that page.
+3. **Enter hours** (`/team/hours`). The supervisor picks a day and a project, ticks each worker who worked, and checks each one's role, start and end. All ticked rows are saved together or not at all (`enterCrewHours`). An end time earlier than the start counts as the next morning. Each row becomes an ordinary priced entry with `source = 'manager'` and the reason "Hours entered by supervisor", so overlap checks, week rules and locking apply as usual.
+4. **Submit and approve.** Once the week has ended, the supervisor opens the worker's timesheet from the team queue, submits it on the worker's behalf (`submitOnBehalf`), and approves it. The supervisor may approve hours they entered for others, but never their own.
 
 ## 10. Guarantees enforced by the database
 

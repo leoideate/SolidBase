@@ -58,7 +58,7 @@ async function targetTimesheet(tx: Tx, actor: Actor, workerId: string, startAt: 
   return locked;
 }
 
-function mapDbError(e: unknown): never {
+export function mapDbError(e: unknown): never {
   if (e instanceof AppError) throw e;
   if (pgCode(e) === "23P01") throw new AppError("This time overlaps another entry for the worker.", "overlap");
   if (pgCode(e) === "23505") throw new AppError("The worker already has an open entry.", "already_open");
@@ -131,45 +131,51 @@ export async function correctEntry(actor: Actor, entryId: string, input: EntryIn
 export async function addEntry(actor: Actor, workerId: string, input: EntryInput & { endAt: Date }, reason: string) {
   if (!reason.trim()) throw new AppError("A reason is required.");
   try {
-    return await db.transaction(async (tx) => {
-      await assertCanManageWorker(tx, actor, workerId);
-      await validateAllocation(tx, actor, input.projectId, input.jobRoleId);
-      validateTimes(input.startAt, input.endAt);
-      const ts = await targetTimesheet(tx, actor, workerId, input.startAt);
-      const durationSeconds = elapsedSeconds(input.startAt, input.endAt);
-      const pricing = await priceEntry(tx, { companyId: actor.companyId, workerId, ...input, durationSeconds });
-      const [entry] = await tx
-        .insert(schema.workEntries)
-        .values({
-          companyId: actor.companyId,
-          workerId,
-          projectId: input.projectId,
-          jobRoleId: input.jobRoleId,
-          timesheetId: ts.id,
-          startAt: input.startAt,
-          endAt: input.endAt,
-          durationSeconds,
-          status: "closed",
-          source: "manager",
-          ...pricing,
-        })
-        .returning();
-      await tx.insert(schema.entryRevisions).values({
-        companyId: actor.companyId,
-        entryId: entry.id,
-        action: "created",
-        before: null,
-        after: fields(entry),
-        reason: reason.trim(),
-        editedBy: actor.memberId,
-      });
-      await versionAfterCorrection(tx, actor, ts.id, reason.trim());
-      await audit(tx, actor, "entry.created_by_manager", "work_entry", entry.id, { reason });
-      return entry;
-    });
+    return await db.transaction((tx) => insertManagerEntry(tx, actor, workerId, input, reason.trim()));
   } catch (e) {
     mapDbError(e);
   }
+}
+
+/**
+ * Insert a closed, priced entry recorded by a manager, with its revision, version and audit rows.
+ * Shared by single missing entries and the supervisor crew-hours sheet.
+ */
+export async function insertManagerEntry(tx: Tx, actor: Actor, workerId: string, input: EntryInput & { endAt: Date }, reason: string) {
+  await assertCanManageWorker(tx, actor, workerId);
+  await validateAllocation(tx, actor, input.projectId, input.jobRoleId);
+  validateTimes(input.startAt, input.endAt);
+  const ts = await targetTimesheet(tx, actor, workerId, input.startAt);
+  const durationSeconds = elapsedSeconds(input.startAt, input.endAt);
+  const pricing = await priceEntry(tx, { companyId: actor.companyId, workerId, ...input, durationSeconds });
+  const [entry] = await tx
+    .insert(schema.workEntries)
+    .values({
+      companyId: actor.companyId,
+      workerId,
+      projectId: input.projectId,
+      jobRoleId: input.jobRoleId,
+      timesheetId: ts.id,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      durationSeconds,
+      status: "closed",
+      source: "manager",
+      ...pricing,
+    })
+    .returning();
+  await tx.insert(schema.entryRevisions).values({
+    companyId: actor.companyId,
+    entryId: entry.id,
+    action: "created",
+    before: null,
+    after: fields(entry),
+    reason,
+    editedBy: actor.memberId,
+  });
+  await versionAfterCorrection(tx, actor, ts.id, reason);
+  await audit(tx, actor, "entry.created_by_manager", "work_entry", entry.id, { reason });
+  return entry;
 }
 
 /** Void a duplicate or mistaken entry. History is kept; the entry is excluded from totals. */

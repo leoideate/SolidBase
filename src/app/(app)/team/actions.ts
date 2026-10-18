@@ -1,10 +1,11 @@
 "use server";
 
-import { runAction, str } from "@/server/action";
+import { bool, runAction, str } from "@/server/action";
 import type { ActionState } from "@/server/action";
 import { AppError } from "@/server/errors";
 import { addEntry, correctEntry, voidEntry } from "@/server/services/corrections";
-import { adminSubmitTimesheet, approveTimesheet, reopenTimesheet, returnTimesheet } from "@/server/services/timesheets";
+import { addCrewWorker, enterCrewHours, setCrewAllocations } from "@/server/services/crew";
+import { submitOnBehalf, approveTimesheet, reopenTimesheet, returnTimesheet } from "@/server/services/timesheets";
 import { parseLocalDateTime } from "@/lib/time";
 
 function times(fd: FormData, requireEnd: boolean) {
@@ -64,7 +65,39 @@ export async function reopenAction(_: ActionState, fd: FormData): Promise<Action
 
 export async function adminSubmitAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
-    const v = await adminSubmitTimesheet(actor, str(fd, "timesheetId"), str(fd, "reason"));
-    return `Submitted on the worker's behalf (version ${v}).`;
+    const v = await submitOnBehalf(actor, str(fd, "timesheetId"), str(fd, "reason"));
+    return `Submitted on the worker's behalf (version ${v}). You can now approve it.`;
+  }, { revalidate: "/team" });
+}
+
+export async function addCrewWorkerAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await addCrewWorker(actor, {
+      displayName: str(fd, "displayName"),
+      workerCode: str(fd, "workerCode"),
+      projectIds: fd.getAll("projectIds").map(String),
+      jobRoleIds: fd.getAll("jobRoleIds").map(String),
+    });
+    return "Worker added to your crew. You can now enter their hours. Ask admin for a PIN if they should use the app.";
+  }, { revalidate: "/team" });
+}
+
+export async function crewAllocationsAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await setCrewAllocations(actor, str(fd, "workerId"), fd.getAll("projectIds").map(String), fd.getAll("jobRoleIds").map(String));
+    return "Roles and projects saved.";
+  }, { revalidate: "/team" });
+}
+
+/** One row per crew member; only ticked rows are saved. */
+export async function crewHoursAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const rows = fd
+      .getAll("workerId")
+      .map(String)
+      .filter((id) => bool(fd, `on_${id}`))
+      .map((id) => ({ workerId: id, jobRoleId: str(fd, `role_${id}`), start: str(fd, `start_${id}`), end: str(fd, `end_${id}`) }));
+    const n = await enterCrewHours(actor, { date: str(fd, "date"), projectId: str(fd, "projectId"), rows });
+    return `Saved hours for ${n} worker${n === 1 ? "" : "s"}.`;
   }, { revalidate: "/team" });
 }

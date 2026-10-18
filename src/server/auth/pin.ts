@@ -4,7 +4,9 @@ export function hashPin(pin: string) {
   return hash(pin, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
 }
 
-export async function verifyPin(pinHash: string, pin: string) {
+/** A user without a PIN (added by a supervisor, no app access yet) never verifies. */
+export async function verifyPin(pinHash: string | null, pin: string) {
+  if (!pinHash) return false;
   try {
     return await verify(pinHash, pin);
   } catch {

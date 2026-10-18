@@ -67,11 +67,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
         <section className="card space-y-4">
           <div>
-            <h2 className="h2 mb-2">Reset PIN</h2>
+            <h2 className="h2 mb-2">{u.pinHash ? "Reset PIN" : "Set PIN (gives app access)"}</h2>
+            {!u.pinHash && <p className="muted mb-2">Added by a supervisor, with no app login yet. After you set a PIN, give the worker their login name <strong>{u.username}</strong> and the temporary PIN.</p>}
             <ActionForm action={resetPinAction} className="flex flex-col gap-2 sm:flex-row" resetOnSuccess>
               <input type="hidden" name="memberId" value={m.id} />
               <input name="pin" className="input flex-1" placeholder="New temporary 6-digit PIN" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="off" />
-              <SubmitButton className="btn-secondary">Reset PIN</SubmitButton>
+              <SubmitButton className="btn-secondary">{u.pinHash ? "Reset PIN" : "Set PIN"}</SubmitButton>
             </ActionForm>
           </div>
           <div className="border-t border-slate-200 pt-4">

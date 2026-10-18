@@ -14,6 +14,7 @@
 ## Everyday tasks
 | Task | How |
 |---|---|
+| Supervisor-added worker needs the app | The user list shows *No app login*. Open the user → **Set PIN**, then give them the login name shown (`w.<worker id>`) and the temporary PIN. |
 | Worker forgot their PIN | Open the user's page → **Reset PIN** with a temporary PIN. Their sessions end and they choose a new PIN at next login. |
 | Worker leaves | **Deactivate** on their page. They can't log in, but their history is kept. Their open shift (if any) appears in the manager queue for closing. |
 | Rate change | Add a new rate with a later *effective from* date. To stop a rate, use **End**. Rates are never deleted. |

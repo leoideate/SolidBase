@@ -59,7 +59,7 @@ export const users = pgTable("users", {
   id: id(),
   username: text("username").notNull().unique(), // stored lower-case
   displayName: text("display_name").notNull(),
-  pinHash: text("pin_hash").notNull(),
+  pinHash: text("pin_hash"), // NULL = no app login yet (worker added by a supervisor; admin sets the PIN)
   mustChangePin: boolean("must_change_pin").notNull().default(true),
   failedAttempts: integer("failed_attempts").notNull().default(0),
   lockedUntil: ts("locked_until"),

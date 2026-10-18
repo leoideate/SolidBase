@@ -9,6 +9,8 @@ export const en = {
     myWeek: "My week",
     history: "History",
     team: "Team queue",
+    crewHours: "Enter hours",
+    crew: "My crew",
     overview: "Team overview",
     admin: "Admin",
     costs: "CostMaster",

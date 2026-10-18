@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "../db";
+import type { Tx } from "../db";
 import type { Actor } from "../actor";
 import { requireAdmin } from "../authz";
 import { AppError, NotFound, pgCode } from "../errors";
@@ -240,23 +241,29 @@ export async function endRate(actor: Actor, rateId: string, effectiveTo: string)
 export async function setWorkerAllocations(actor: Actor, workerId: string, projectIds: string[], jobRoleIds: string[]) {
   requireAdmin(actor);
   const m = await memberInCompany(actor, workerId);
-  await db.transaction(async (tx) => {
-    await tx.delete(schema.workerProjects).where(eq(schema.workerProjects.workerId, m.id));
-    await tx.delete(schema.workerJobRoles).where(eq(schema.workerJobRoles.workerId, m.id));
-    if (projectIds.length) {
-      const valid = await tx.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.companyId, actor.companyId));
-      const ok = new Set(valid.map((v) => v.id));
-      const ids = projectIds.filter((p) => ok.has(p));
-      if (ids.length) await tx.insert(schema.workerProjects).values(ids.map((projectId) => ({ companyId: actor.companyId, workerId: m.id, projectId })));
-    }
-    if (jobRoleIds.length) {
-      const valid = await tx.select({ id: schema.jobRoles.id }).from(schema.jobRoles).where(eq(schema.jobRoles.companyId, actor.companyId));
-      const ok = new Set(valid.map((v) => v.id));
-      const ids = jobRoleIds.filter((r) => ok.has(r));
-      if (ids.length) await tx.insert(schema.workerJobRoles).values(ids.map((jobRoleId) => ({ companyId: actor.companyId, workerId: m.id, jobRoleId })));
-    }
-    await audit(tx, actor, "worker.allocations_changed", "member", m.id, { projectIds, jobRoleIds });
-  });
+  await db.transaction((tx) => writeAllocations(tx, actor, m.id, projectIds, jobRoleIds));
+}
+
+/**
+ * Replace the projects and roles a worker may clock against or be booked to. IDs outside the
+ * actor's company are ignored. Shared by admin and supervisor (crew) screens.
+ */
+export async function writeAllocations(tx: Tx, actor: Actor, workerId: string, projectIds: string[], jobRoleIds: string[]) {
+  await tx.delete(schema.workerProjects).where(eq(schema.workerProjects.workerId, workerId));
+  await tx.delete(schema.workerJobRoles).where(eq(schema.workerJobRoles.workerId, workerId));
+  if (projectIds.length) {
+    const valid = await tx.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.companyId, actor.companyId));
+    const ok = new Set(valid.map((v) => v.id));
+    const ids = projectIds.filter((p) => ok.has(p));
+    if (ids.length) await tx.insert(schema.workerProjects).values(ids.map((projectId) => ({ companyId: actor.companyId, workerId, projectId })));
+  }
+  if (jobRoleIds.length) {
+    const valid = await tx.select({ id: schema.jobRoles.id }).from(schema.jobRoles).where(eq(schema.jobRoles.companyId, actor.companyId));
+    const ok = new Set(valid.map((v) => v.id));
+    const ids = jobRoleIds.filter((r) => ok.has(r));
+    if (ids.length) await tx.insert(schema.workerJobRoles).values(ids.map((jobRoleId) => ({ companyId: actor.companyId, workerId, jobRoleId })));
+  }
+  await audit(tx, actor, "worker.allocations_changed", "member", workerId, { projectIds, jobRoleIds });
 }
 
 export async function assignManager(actor: Actor, managerId: string, workerId: string, kind: "primary" | "cover") {

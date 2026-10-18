@@ -10,7 +10,7 @@ import { NotFound } from "../errors";
 export async function listMembers(actor: Actor) {
   requireAdmin(actor);
   return db
-    .select({ m: schema.companyMembers, u: { id: schema.users.id, username: schema.users.username, displayName: schema.users.displayName, mustChangePin: schema.users.mustChangePin, lockedUntil: schema.users.lockedUntil } })
+    .select({ m: schema.companyMembers, u: { id: schema.users.id, username: schema.users.username, displayName: schema.users.displayName, mustChangePin: schema.users.mustChangePin, lockedUntil: schema.users.lockedUntil, hasPin: sql<boolean>`${schema.users.pinHash} is not null` } })
     .from(schema.companyMembers)
     .innerJoin(schema.users, eq(schema.users.id, schema.companyMembers.userId))
     .where(eq(schema.companyMembers.companyId, actor.companyId))

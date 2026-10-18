@@ -38,7 +38,7 @@ export default async function UsersPage() {
                 <td className="text-xs">{[m.isWorker && "Worker", m.isManager && "Manager", m.isAdmin && "Admin", m.isIt && "IT"].filter(Boolean).join(", ") || "—"}</td>
                 <td className="text-xs">
                   {m.isActive ? "Active" : "Deactivated"}
-                  {u.mustChangePin && m.isActive && <div className="text-amber-700">Temporary PIN</div>}
+                  {!u.hasPin ? <div className="text-amber-700">No app login</div> : u.mustChangePin && m.isActive && <div className="text-amber-700">Temporary PIN</div>}
                 </td>
               </tr>
             ))}

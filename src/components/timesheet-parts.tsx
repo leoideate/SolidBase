@@ -184,7 +184,7 @@ export function HistoryPanel({ data }: { data: WeekData }) {
             <li key={v.id} className="rounded-xl border border-slate-200 p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold">Version {v.versionNo}</span>
-                <span className="text-slate-500">{v.cause.replace("_", " ")}</span>
+                <span className="text-slate-500">{v.cause === "admin_submitted" ? "submitted on behalf" : v.cause.replace("_", " ")}</span>
                 {v.approvedAt && <span className="badge bg-emerald-100 text-emerald-800">Approved</span>}
                 {v.returnedAt && <span className="badge bg-amber-100 text-amber-900">Returned</span>}
               </div>

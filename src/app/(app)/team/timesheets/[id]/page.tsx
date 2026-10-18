@@ -196,12 +196,12 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
         </section>
       )}
 
-      {actor.isAdmin && data.canManage && (ts.status === "draft" || ts.status === "returned") && data.weekEnded && ts.workerId !== actor.memberId && (
+      {data.canManage && (ts.status === "draft" || ts.status === "returned") && data.weekEnded && ts.workerId !== actor.memberId && (
         <section className="card space-y-2">
           <h2 className="h2">Submit on worker&apos;s behalf</h2>
           <ActionForm action={adminSubmitAction} className="flex flex-col gap-2 sm:flex-row">
             <input type="hidden" name="timesheetId" value={ts.id} />
-            <input name="reason" className="input flex-1" placeholder="Reason (required)" required />
+            <input name="reason" className="input flex-1" placeholder="Reason (required)" defaultValue={data.worker.hasPin ? "" : "Hours recorded by supervisor"} required />
             <SubmitButton className="btn-secondary">Submit</SubmitButton>
           </ActionForm>
         </section>
