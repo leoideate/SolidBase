@@ -3,7 +3,7 @@
  * matter of adding a dictionary per language (ARD p.10). Document packs are out of scope.
  */
 export const en = {
-  appName: "Site Attendance",
+  appName: "SolidBase",
   nav: {
     clock: "Clock",
     myWeek: "My week",

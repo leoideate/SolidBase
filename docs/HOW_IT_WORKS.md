@@ -1,10 +1,10 @@
-# How Site Attendance works
+# How SolidBase works
 
 This document walks through the whole system from start to finish: who uses it, what happens when a worker clocks in, how a week of hours becomes an approved and priced timesheet, and which rules the code and the database enforce along the way. The settings behind these rules are recorded in [DECISIONS.md](DECISIONS.md), and the time and money policy in [ROUNDING.md](ROUNDING.md).
 
 ## 1. What it is
 
-Site Attendance is one responsive web app. Workers install it on their phones as a PWA, and managers use it on a tablet or desktop. It works online only: nothing is recorded unless the server has confirmed the save.
+SolidBase is one responsive web app. Workers install it on their phones as a PWA, and managers use it on a tablet or desktop. It works online only: nothing is recorded unless the server has confirmed the save.
 
 | Layer | Technology |
 |---|---|

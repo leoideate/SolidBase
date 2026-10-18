@@ -1,12 +1,12 @@
 {
-  "name": "Site Attendance",
-  "short_name": "Attendance",
+  "name": "SolidBase",
+  "short_name": "SolidBase",
   "description": "Clock in and out, weekly timesheets and approvals",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f1f5f9",
+  "background_color": "#ffffff",
   "theme_color": "#0f172a",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },

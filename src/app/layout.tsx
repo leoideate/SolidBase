@@ -3,10 +3,10 @@ import "./globals.css";
 import { RegisterSW } from "@/components/register-sw";
 
 export const metadata: Metadata = {
-  title: "Site Attendance",
+  title: "SolidBase",
   description: "Construction attendance, timesheets and approvals",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Attendance", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "SolidBase", statusBarStyle: "default" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 

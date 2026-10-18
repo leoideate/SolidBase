@@ -1,4 +1,4 @@
-# Site Attendance
+# SolidBase
 
 This is the Release 1 attendance platform from the Application Requirements Document (ARD v1.0, 17 Oct 2026). It is one responsive web app that installs as a PWA on phones and tablets. In it:
 

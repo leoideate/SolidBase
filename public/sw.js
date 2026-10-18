@@ -1,10 +1,10 @@
 // App-shell service worker: makes the app installable and caches static assets only.
 // It never caches pages or API responses and never queues clock events offline (ARD: online only).
-const CACHE = "sa-static-v1";
+const CACHE = "sb-static-v2";
 const OFFLINE_HTML =
   '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline</title>' +
   '<body style="font-family:system-ui;padding:2rem;background:#f1f5f9;color:#0f172a">' +
-  "<h1>No connection</h1><p>Site Attendance needs an internet connection. Nothing was recorded. " +
+  "<h1>No connection</h1><p>SolidBase needs an internet connection. Nothing was recorded. " +
   "Reconnect and try again; any shift you already started is still open.</p></body>";
 
 self.addEventListener("install", (e) => {

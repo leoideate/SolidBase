@@ -21,7 +21,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900 text-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-sm font-black text-slate-950">SA</div>
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white p-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/solidbase-mark.svg" alt="SolidBase" className="h-full w-full" />
+            </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold">{actor.displayName}</div>
               <div className="truncate text-xs text-slate-400">{roles || "CostMaster"}</div>
