@@ -44,6 +44,7 @@ pnpm e2e        # Playwright business acceptance tests T01–T08 + responsive ch
 
 ## Documentation
 
+- [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md): end-to-end walkthrough of how the system works, with screenshots
 - [docs/DECISIONS.md](docs/DECISIONS.md): settings confirmed for planning (ARD p.8) and how each requirement is met
 - [docs/ROUNDING.md](docs/ROUNDING.md): duration, rounding and timezone policy
 - [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md): administrator instructions
