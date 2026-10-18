@@ -59,7 +59,12 @@ Every deploy then runs these steps:
    npx tsx scripts/create-admin.ts --company "Your Company Ltd" --username <login> --name "Full Name" --code A001 --pin <6 digits>
    ```
    The admin logs in at the service URL and must choose a new PIN. Everything else (projects, roles, rates, users, supervisors) is set up from Admin.
-5. Optionally add a custom domain under the web service → **Settings → Custom Domains**. Render issues the HTTPS certificate.
+5. **Forgotten admin PIN** (nobody can reset it in the app): in the **Shell**, run
+   ```bash
+   npx tsx scripts/reset-pin.ts --username <login> --pin <6 digits>
+   ```
+   This sets a temporary PIN, clears any lockout, ends that user's sessions and records the reset in the audit log. If the username is wrong, it lists the existing usernames.
+6. Optionally add a custom domain under the web service → **Settings → Custom Domains**. Render issues the HTTPS certificate.
 
 ### Notes
 - Pushing to the default branch redeploys automatically (`autoDeploy: true`).

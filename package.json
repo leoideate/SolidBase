@@ -13,7 +13,8 @@
     "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
     "e2e": "playwright test",
-    "admin:create": "tsx scripts/create-admin.ts"
+    "admin:create": "tsx scripts/create-admin.ts",
+    "pin:reset": "tsx scripts/reset-pin.ts"
   },
   "dependencies": {
     "@date-fns/tz": "1.4.1",

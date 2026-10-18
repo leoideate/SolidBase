@@ -16,6 +16,7 @@
 |---|---|
 | Supervisor-added worker needs the app | The user list shows *No app login*. Open the user → **Set PIN**, then give them the login name shown (`w.<worker id>`) and the temporary PIN. |
 | Record a worker's bank details | Open the user → **Bank details** → *Add bank details* (bank name and IBAN). Only admins see them. The IBAN is shown masked; **Show full IBAN** reveals it and is recorded in the audit log. After any change, confirm the new IBAN with the worker by phone before paying them. Supervisors can record a first IBAN for their crew; the audit log shows who entered it. Only you can change it. |
+| You (the only admin) forgot your PIN | In Render → web service → **Shell**, run `npx tsx scripts/reset-pin.ts --username <login> --pin <6 digits>`, then log in with that PIN and choose a new one. |
 | Worker forgot their PIN | Open the user's page → **Reset PIN** with a temporary PIN. Their sessions end and they choose a new PIN at next login. |
 | Worker leaves | **Deactivate** on their page. They can't log in, but their history is kept. Their open shift (if any) appears in the manager queue for closing. |
 | Rate change | Add a new rate with a later *effective from* date. To stop a rate, use **End**. Rates are never deleted. |
