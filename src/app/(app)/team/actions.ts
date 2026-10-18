@@ -6,6 +6,7 @@ import { AppError } from "@/server/errors";
 import { addEntry, correctEntry, voidEntry } from "@/server/services/corrections";
 import { addCrewWorker, enterCrewHours, setCrewAllocations } from "@/server/services/crew";
 import { personFromForm } from "@/server/services/people";
+import { setBankDetails } from "@/server/services/bank";
 import { submitOnBehalf, approveTimesheet, reopenTimesheet, returnTimesheet } from "@/server/services/timesheets";
 import { parseLocalDateTime } from "@/lib/time";
 
@@ -93,11 +94,19 @@ export async function addCrewWorkerAction(_: ActionState, fd: FormData): Promise
   return runAction(async (actor) => {
     await addCrewWorker(actor, {
       person: personFromForm(fd),
+      bank: { bankName: str(fd, "bankName"), iban: str(fd, "iban") },
       workerCode: str(fd, "workerCode"),
       projectIds: fd.getAll("projectIds").map(String),
       jobRoleIds: fd.getAll("jobRoleIds").map(String),
     });
     return "Worker added to your crew. You can now enter their hours. Ask admin for a PIN if they should use the app.";
+  }, { revalidate: "/team" });
+}
+
+export async function crewBankAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await setBankDetails(actor, str(fd, "workerId"), { bankName: str(fd, "bankName"), iban: str(fd, "iban") });
+    return "IBAN saved. Only an administrator can change it from now on.";
   }, { revalidate: "/team" });
 }
 

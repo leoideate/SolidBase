@@ -7,7 +7,8 @@ import { ActionForm, SubmitButton } from "@/components/action-form";
 import { PersonFields } from "@/components/person-fields";
 import { ENGAGEMENT_LABEL } from "@/lib/labels";
 import { Empty, PageHeader } from "@/components/ui";
-import { addCrewWorkerAction, crewAllocationsAction } from "../actions";
+import { maskIban } from "@/lib/money";
+import { addCrewWorkerAction, crewAllocationsAction, crewBankAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,26 @@ function AllocationChecks({ lookups, projectIds = [], roleIds = [] }: { lookups:
   );
 }
 
+/**
+ * Bank name and IBAN. A supervisor can record the first IBAN for a crew member; once saved it's
+ * shown masked and only an administrator can change it.
+ */
+function BankFields({ required = false }: { required?: boolean }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
+      <div>
+        <label className="label">Bank name{required ? "" : " (optional)"}</label>
+        <input name="bankName" className="input" aria-label="Bank name" autoComplete="off" required={required} />
+      </div>
+      <div>
+        <label className="label">IBAN{required ? "" : " (optional)"}</label>
+        <input name="iban" className="input font-mono uppercase" aria-label="IBAN" placeholder="IE29 AIBK 9311 5212 3456 78" autoComplete="off" spellCheck={false} required={required} />
+      </div>
+      <p className="muted sm:col-span-2">Once saved, the IBAN is shown masked and only an administrator can change it.</p>
+    </div>
+  );
+}
+
 /** Supervisor's crew: add workers and choose their roles and projects. Admin alone sets PINs. */
 export default async function CrewPage() {
   const actor = await requireActor();
@@ -59,6 +80,7 @@ export default async function CrewPage() {
           <summary className="cursor-pointer text-sm font-semibold text-blue-700">+ Add a worker</summary>
           <ActionForm action={addCrewWorkerAction} className="mt-3 space-y-3" resetOnSuccess>
             <PersonFields />
+            <BankFields />
             <AllocationChecks lookups={lookups} />
             <p className="muted">The worker can&apos;t log in yet. You enter their hours. If they should clock in on their own phone, ask admin to set a PIN.</p>
             <SubmitButton>Add worker</SubmitButton>
@@ -82,6 +104,15 @@ export default async function CrewPage() {
                     {w.engagementType && <> · {ENGAGEMENT_LABEL[w.engagementType]}</>}
                     {w.mobile && <> · {w.mobile}</>}
                   </div>
+                  <div className="text-xs text-slate-500">
+                    {w.ibanHint ? (
+                      <>
+                        {w.bankName} · <span className="font-mono">{maskIban(w.ibanHint)}</span>
+                      </>
+                    ) : (
+                      "No IBAN recorded"
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {!w.isActive && <span className="badge bg-slate-200 text-slate-700">Deactivated</span>}
@@ -92,6 +123,16 @@ export default async function CrewPage() {
                   )}
                 </div>
               </div>
+              {!w.ibanHint && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-semibold text-blue-700 select-none">Add IBAN</summary>
+                  <ActionForm action={crewBankAction} className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <input type="hidden" name="workerId" value={w.id} />
+                    <BankFields required />
+                    <SubmitButton className="btn-primary btn-sm">Save IBAN</SubmitButton>
+                  </ActionForm>
+                </details>
+              )}
               <details className="mt-2">
                 <summary className="cursor-pointer text-xs font-semibold text-blue-700 select-none">Change roles and projects</summary>
                 <ActionForm action={crewAllocationsAction} className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">

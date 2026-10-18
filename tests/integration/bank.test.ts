@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { db, schema } from "@/server/db";
 import { clearBankDetails, revealIban, setBankDetails } from "@/server/services/bank";
+import { addCrewWorker, listCrew } from "@/server/services/crew";
 import { buildExport } from "@/server/services/exports";
 import { seedDemo } from "../fixtures";
 
@@ -27,7 +28,7 @@ describe("worker bank details", () => {
     // Supervisors, workers, CostMaster and IT can't read or change it.
     for (const who of [m().sean, m().pat, m().owner, m()["it.support"]]) {
       await expect(revealIban(who, m().pat.memberId)).rejects.toThrow(/Administrator/);
-      await expect(setBankDetails(who, m().pat.memberId, { bankName: "X", iban: IBAN })).rejects.toThrow(/Administrator/);
+      await expect(setBankDetails(who, m().pat.memberId, { bankName: "X", iban: IBAN })).rejects.toThrow(/administrator/i);
     }
 
     // The ciphertext is bound to its worker: copied onto another row it doesn't decrypt.
@@ -50,5 +51,29 @@ describe("worker bank details", () => {
     await setBankDetails(m().admin, m().pat.memberId, { bankName: "AIB", iban: IBAN });
     const exp = await buildExport(m().admin, { scope: "team", fromWeek: s.lastWeek, toWeek: s.lastWeek });
     expect(exp.csv).not.toMatch(/IBAN|AIBK|5678/);
+  });
+
+  it("a supervisor can record the first IBAN for their own crew, but never change or see it", async () => {
+    const joe = await addCrewWorker(m().sean, {
+      person: { firstName: "Joe", lastName: "Nolan" },
+      projectIds: [],
+      jobRoleIds: [s.roles.DUMP.id],
+      bank: { bankName: "AIB", iban: IBAN },
+    });
+    const row = (await listCrew(m().sean)).find((w) => w.id === joe.id)!;
+    expect(row.ibanHint).toBe("IE5678");
+    expect(await revealIban(m().admin, joe.id)).toBe(IBAN);
+    await expect(revealIban(m().sean, joe.id)).rejects.toThrow(/Administrator/);
+    await expect(setBankDetails(m().sean, joe.id, { bankName: "Other", iban: "GB82 WEST 1234 5698 7654 32" })).rejects.toThrow(/Only an administrator can change/);
+
+    // First IBAN for an existing crew member: allowed; for someone else's crew: refused.
+    await setBankDetails(m().sean, m().mary.memberId, { bankName: "BOI", iban: "GB82 WEST 1234 5698 7654 32" });
+    await expect(setBankDetails(m().niamh, m().pat.memberId, { bankName: "BOI", iban: IBAN })).rejects.toThrow();
+    // An invalid IBAN on the add-worker form stops the whole add.
+    await expect(
+      addCrewWorker(m().sean, { person: { firstName: "Bad", lastName: "Iban" }, projectIds: [], jobRoleIds: [s.roles.DUMP.id], bank: { bankName: "AIB", iban: "IE00 0000" } }),
+    ).rejects.toThrow(/isn't valid/);
+    // Blank bank fields are fine.
+    await addCrewWorker(m().sean, { person: { firstName: "No", lastName: "Bank" }, projectIds: [], jobRoleIds: [s.roles.DUMP.id], bank: { bankName: "", iban: "" } });
   });
 });

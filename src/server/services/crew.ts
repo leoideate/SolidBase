@@ -8,6 +8,8 @@ import { audit } from "./audit";
 import { writeAllocations } from "./admin";
 import { insertManagerEntry, mapDbError } from "./corrections";
 import { nextWorkerCode, personValues } from "./people";
+import { checkBank, writeBank } from "./bank";
+import type { BankInput } from "./bank";
 import type { PersonInput } from "./people";
 
 /**
@@ -38,6 +40,8 @@ export async function listCrew(actor: Actor) {
       workerCode: schema.companyMembers.workerCode,
       engagementType: schema.companyMembers.engagementType,
       mobile: schema.users.mobile,
+      bankName: schema.companyMembers.bankName,
+      ibanHint: schema.companyMembers.ibanLast4,
       isActive: schema.companyMembers.isActive,
       hasPin: sql<boolean>`${schema.users.pinHash} is not null`,
     })
@@ -57,10 +61,11 @@ export async function listCrew(actor: Actor) {
 /** Supervisor adds a worker to their crew. No PIN: the worker can't log in until admin sets one. */
 export async function addCrewWorker(
   actor: Actor,
-  input: { person: PersonInput; workerCode?: string; projectIds: string[]; jobRoleIds: string[] },
+  input: { person: PersonInput; workerCode?: string; projectIds: string[]; jobRoleIds: string[]; bank?: BankInput },
 ) {
   requireSupervisor(actor);
   const person = personValues(input.person);
+  const bank = input.bank && (input.bank.bankName.trim() || input.bank.iban.trim()) ? checkBank(input.bank) : null;
   if (input.jobRoleIds.length === 0) throw new AppError("Choose at least one role.");
   try {
     return await db.transaction(async (tx) => {
@@ -79,6 +84,7 @@ export async function addCrewWorker(
           .values({ companyId: actor.companyId, managerId: actor.memberId, workerId: member.id, kind: "primary", createdBy: actor.memberId });
       }
       await writeAllocations(tx, actor, member.id, input.projectIds, input.jobRoleIds);
+      if (bank) await writeBank(tx, actor, member, bank);
       await audit(tx, actor, "crew.worker_added", "member", member.id, { workerCode });
       return member;
     });
