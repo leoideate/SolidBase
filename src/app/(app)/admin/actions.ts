@@ -4,6 +4,7 @@ import { bool, runAction, str } from "@/server/action";
 import type { ActionState } from "@/server/action";
 import * as admin from "@/server/services/admin";
 import { personFromForm } from "@/server/services/people";
+import * as bank from "@/server/services/bank";
 
 const R = { revalidate: "/admin" };
 const roles = (fd: FormData) => ({ isWorker: bool(fd, "isWorker"), isManager: bool(fd, "isManager"), isAdmin: bool(fd, "isAdmin"), isIt: bool(fd, "isIt") });
@@ -141,4 +142,23 @@ export async function revokeSupportAction(_: ActionState, fd: FormData): Promise
     await admin.revokeSupport(a, str(fd, "grantId"));
     return "Support access revoked.";
   }, R);
+}
+
+export async function bankDetailsAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (a) => {
+    await bank.setBankDetails(a, str(fd, "memberId"), { bankName: str(fd, "bankName"), iban: str(fd, "iban") });
+    return "Bank details saved. Confirm any change with the worker before the next payment.";
+  }, R);
+}
+
+export async function clearBankAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (a) => {
+    await bank.clearBankDetails(a, str(fd, "memberId"));
+    return "Bank details removed.";
+  }, R);
+}
+
+/** Shows the full IBAN in the form's message only; nothing is cached on the page. */
+export async function revealIbanAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (a) => `IBAN: ${await bank.revealIban(a, str(fd, "memberId"))}`);
 }

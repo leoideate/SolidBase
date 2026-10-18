@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { elapsedSeconds, isoWithOffset, localDate, splitAtWeekBoundaries, weekStartInstant, weekStartOf } from "@/lib/time";
-import { entryValue, hours, sumMoney } from "@/lib/money";
+import { elapsedSeconds, isoWithOffset, localDate, paidSeconds, splitAtWeekBoundaries, weekStartInstant, weekStartOf } from "@/lib/time";
+import { entryValue, formatIban, hours, ibanHint, isValidIban, maskIban, rateValue, sumMoney } from "@/lib/money";
 import { pickRate, specificity } from "@/server/services/rates";
 import { csvCell } from "@/server/services/exports";
 import { dublin } from "../fixtures";
@@ -104,5 +104,24 @@ describe("csv", () => {
     expect(csvCell('O"Brien, Tom')).toBe('"O""Brien, Tom"');
     expect(csvCell("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
     expect(csvCell("-12.50")).toBe("-12.50");
+  });
+});
+
+describe("IBAN", () => {
+  it("validates country, length and checksum, and masks", () => {
+    expect(isValidIban("IE29 AIBK 9311 5212 3456 78")).toBe(true);
+    expect(isValidIban("ie29aibk93115212345678")).toBe(true);
+    expect(isValidIban("GB82 WEST 1234 5698 7654 32")).toBe(true);
+    expect(isValidIban("IE29 AIBK 9311 5212 3456 79")).toBe(false); // checksum
+    expect(isValidIban("IE29 AIBK 9311 5212 3456")).toBe(false); // length
+    expect(isValidIban("not an iban")).toBe(false);
+    expect(formatIban("ie29aibk93115212345678")).toBe("IE29 AIBK 9311 5212 3456 78");
+    expect(maskIban(ibanHint("IE29AIBK93115212345678"))).toBe("IE•• •••• •••• 5678");
+  });
+
+  it("rateValue: hourly uses seconds, a day rate is the day amount", () => {
+    expect(rateValue("hour", 7.5 * 3600, "28.00")).toBe("210.00");
+    expect(rateValue("day", 3 * 3600, "220")).toBe("220.00");
+    expect(paidSeconds(new Date("2026-10-12T07:00:00Z"), new Date("2026-10-12T15:30:00Z"), 30)).toBe(8 * 3600);
   });
 });

@@ -29,6 +29,13 @@
       "when": 1792356750354,
       "tag": "0003_spreadsheet_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792363402716,
+      "tag": "0004_bank_details",
+      "breakpoints": true
     }
   ]
 }

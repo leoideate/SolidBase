@@ -19,6 +19,7 @@
 |---|---|
 | `DATABASE_URL` | Postgres connection string (TLS required in production, e.g. `?sslmode=require`) |
 | `COOKIE_SECURE` | `true` in production, so the session cookie is HTTPS-only |
+| `BANK_DATA_KEY` | Secret (32+ characters) that encrypts worker IBANs. **Keep a copy with the database backups and never change it once IBANs are saved:** stored IBANs can't be read without it. Render generates it (`generateValue`). |
 | `TEST_DATABASE_URL` | Test database, used only by `pnpm test` / `pnpm e2e` |
 
 ## Production deployment (any provider)
@@ -42,7 +43,7 @@ The app is stateless. You can run it as a container (Azure App Service, AWS App 
 | PostgreSQL 16 | `site-attendance-db` | Frankfurt, plan `basic-256mb`, no public access (`ipAllowList: []`) |
 | Node web service | `site-attendance` | Frankfurt, plan `starter`, health check `/api/health` |
 
-The web service gets these environment variables: `DATABASE_URL` (the database's internal connection string), `COOKIE_SECURE=true`, `NODE_VERSION=22` and `APP_TIMEZONE=Europe/Dublin`. pnpm is fetched with `npx` at the version pinned in `render.yaml` (12.4.1, the version used locally). Update all three commands together if you upgrade pnpm.
+The web service gets these environment variables: `DATABASE_URL` (the database's internal connection string), `COOKIE_SECURE=true`, `NODE_VERSION=22`, `APP_TIMEZONE=Europe/Dublin` and `BANK_DATA_KEY`, which Render generates. After the first deploy, copy `BANK_DATA_KEY` from the service's **Environment** page into your password manager. pnpm is fetched with `npx` at the version pinned in `render.yaml` (12.4.1, the version used locally). Update all three commands together if you upgrade pnpm.
 
 Every deploy then runs these steps:
 1. **Build:** `pnpm install --frozen-lockfile && pnpm build`

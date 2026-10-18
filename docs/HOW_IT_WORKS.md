@@ -270,6 +270,7 @@ Both read **approved entries only**, through `approvedEntries()` in `views.ts`. 
 Admin (`services/admin.ts`, `admin-views.ts`, screens under `/admin`):
 
 - **Users**: create users with a temporary PIN and role flags, deactivate them (history is kept) and reset PINs. The IT role can't be combined with admin or manager.
+- **Bank details** (`services/bank.ts`): bank name and IBAN, for the company's records. The IBAN is checked (country, length, mod-97), encrypted with AES-256-GCM under `BANK_DATA_KEY` and bound to the worker's record (`src/server/crypto.ts`). Only the country code and last 4 characters are stored in plain text, for the masked display. Admin only. Each change and each *Show full IBAN* is audited without the number itself. Bank details are never exported.
 - **Worker page**: allowed projects and roles, manager assignments (primary or cover) and CostMaster grants.
 - **Projects** and **roles**: making one inactive hides it from clocking but keeps its history.
 - **Rates**: add rates and end them, never delete. The page lists entries blocked by missing or conflicting rates (`rateProblems`).
@@ -294,7 +295,7 @@ Day-to-day admin tasks are covered in [ADMIN_GUIDE.md](ADMIN_GUIDE.md).
 |---|---|
 | `companies`, `company_settings`, `module_enablements` | The company, its timezone and currency, and its settings (long-shift hours, manager export) |
 | `users` | Login identity and personal details: username, PIN hash (NULL means no app login), lockout state, first, middle and last name, email, mobile, address |
-| `company_members` | A user's membership in a company: worker ID, engagement type (PAYE, Sub-Contractor, Contractor) and role flags |
+| `company_members` | A user's membership in a company: worker ID, engagement type (PAYE, Sub-Contractor, Contractor), role flags, and bank name plus encrypted IBAN (admin only) |
 | `sessions` | Hashed session tokens with expiry |
 | `clients` | The client list chosen from when setting up projects |
 | `projects`, `job_roles` | What workers clock against. A project also holds its client, principal, type, description, address, SIN and start and end dates |

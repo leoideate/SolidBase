@@ -85,6 +85,12 @@ export const companyMembers = pgTable(
     userId: uuid("user_id").notNull().references(() => users.id),
     workerCode: text("worker_code").notNull(),
     engagementType: text("engagement_type", { enum: ENGAGEMENT_TYPES }),
+    // Bank details (admin only). The IBAN is AES-256-GCM encrypted (src/server/crypto.ts); only the country code and last 4 (iban_last4, e.g. "IE5678") are plain.
+    bankName: text("bank_name"),
+    ibanEncrypted: text("iban_encrypted"),
+    ibanLast4: text("iban_last4"),
+    bankUpdatedAt: ts("bank_updated_at"),
+    bankUpdatedBy: uuid("bank_updated_by"),
     isActive: boolean("is_active").notNull().default(true),
     isWorker: boolean("is_worker").notNull().default(true),
     isManager: boolean("is_manager").notNull().default(false),

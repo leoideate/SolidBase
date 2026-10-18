@@ -34,3 +34,7 @@ services:
         value: "true"
       - key: APP_TIMEZONE
         value: Europe/Dublin
+      # Encrypts worker IBANs. Generated once by Render; keep a copy with the database backups,
+      # because stored IBANs can't be read without it. Never change it after IBANs are saved.
+      - key: BANK_DATA_KEY
+        generateValue: true

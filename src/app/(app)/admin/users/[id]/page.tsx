@@ -6,10 +6,15 @@ import { companyLookups } from "@/server/services/views";
 import { AppError } from "@/server/errors";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
+import { maskIban } from "@/lib/money";
+import { fmtDateTime } from "@/lib/time";
 import { RoleCheckboxes } from "@/components/role-checkboxes";
 import { PersonFields } from "@/components/person-fields";
 import {
   allocationsAction,
+  bankDetailsAction,
+  clearBankAction,
+  revealIbanAction,
   assignManagerAction,
   grantCostAction,
   resetPinAction,
@@ -37,6 +42,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const managers = all.filter((x) => x.m.isManager && x.m.isActive && x.m.id !== id);
   const workers = all.filter((x) => x.m.isWorker && x.m.isActive && x.m.id !== id);
   const { m, u } = d;
+  const bankEditor = all.find((x) => x.m.id === m.bankUpdatedBy)?.u.displayName;
+  const recentBankChange = !!m.ibanLast4 && !!m.bankUpdatedAt && Date.now() - m.bankUpdatedAt.getTime() < 30 * 86_400_000;
 
   return (
     <div className="space-y-4">
@@ -78,6 +85,61 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           </div>
         </section>
       </div>
+
+      <section className="card space-y-3">
+        <div>
+          <h2 className="h2">Bank details</h2>
+          <p className="muted">For the company&apos;s records. Only administrators can see these. The IBAN is stored encrypted, and every change or view is recorded in the audit log.</p>
+        </div>
+        {m.ibanLast4 ? (
+          <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+            <dt className="text-slate-500">Bank</dt>
+            <dd className="font-medium">{m.bankName}</dd>
+            <dt className="text-slate-500">IBAN</dt>
+            <dd className="font-mono">{maskIban(m.ibanLast4)}</dd>
+            <dt className="text-slate-500">Last changed</dt>
+            <dd>
+              {fmtDateTime(m.bankUpdatedAt)} by {bankEditor ?? "—"}
+            </dd>
+          </dl>
+        ) : (
+          <p className="text-sm text-slate-600">No bank details recorded.</p>
+        )}
+        {recentBankChange && (
+          <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+            Bank details changed in the last 30 days. Confirm the new IBAN with the worker by phone before paying them.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {m.ibanLast4 && (
+            <ActionForm action={revealIbanAction}>
+              <input type="hidden" name="memberId" value={m.id} />
+              <SubmitButton className="btn-secondary btn-sm">Show full IBAN</SubmitButton>
+            </ActionForm>
+          )}
+          {m.ibanLast4 && (
+            <ActionForm action={clearBankAction} confirm={`Remove the bank details for ${u.displayName}?`}>
+              <input type="hidden" name="memberId" value={m.id} />
+              <SubmitButton className="btn-danger btn-sm">Remove</SubmitButton>
+            </ActionForm>
+          )}
+        </div>
+        <details>
+          <summary className="cursor-pointer text-sm font-semibold text-blue-700">{m.ibanLast4 ? "Change bank details" : "+ Add bank details"}</summary>
+          <ActionForm action={bankDetailsAction} className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end" resetOnSuccess>
+            <input type="hidden" name="memberId" value={m.id} />
+            <div>
+              <label className="label" htmlFor="bankName">Bank name</label>
+              <input id="bankName" name="bankName" className="input" defaultValue={m.bankName ?? ""} autoComplete="off" required />
+            </div>
+            <div>
+              <label className="label" htmlFor="iban">IBAN</label>
+              <input id="iban" name="iban" className="input font-mono uppercase" placeholder="IE29 AIBK 9311 5212 3456 78" autoComplete="off" spellCheck={false} required />
+            </div>
+            <SubmitButton>Save</SubmitButton>
+          </ActionForm>
+        </details>
+      </section>
 
       {m.isWorker && (
         <section className="card">

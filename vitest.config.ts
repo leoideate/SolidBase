@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     include: ["tests/**/*.test.ts"],
-    env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "", TZ: "UTC" },
+    env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "", TZ: "UTC", BANK_DATA_KEY: "test-only-bank-data-key-0123456789abcdef" },
     fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 60000,
