@@ -23,6 +23,7 @@ export default async function AdminHome() {
           ["/admin/users", "Users and access", "Create accounts, reset PINs, set roles, assign workers to managers, grant CostMaster."],
           ["/admin/projects", "Projects", "Clients, projects, addresses, SIN, project types and dates."],
           ["/admin/rates", "Rates", "Agreed hourly or day rates in EUR with effective dates and overrides."],
+          ["/admin/import", "Import from CSV", "Bulk upload workers and previous weeks' hours, checked before anything is saved."],
           ["/admin/support", "IT support access", "Authorise and revoke time-limited support access."],
           ["/admin/settings", "Settings", "Long-shift flag threshold and manager CSV export."],
           ["/admin/audit", "Audit log", "Who changed permissions, assignments, rates and approvals."],

@@ -8,6 +8,7 @@ const LINKS = [
   ["/admin/projects", "Projects"],
   ["/admin/job-roles", "Roles"],
   ["/admin/rates", "Rates"],
+  ["/admin/import", "Import CSV"],
   ["/admin/support", "IT support access"],
   ["/admin/settings", "Settings"],
   ["/admin/exports", "Export history"],

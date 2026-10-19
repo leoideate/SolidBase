@@ -1,0 +1,3 @@
+worker_id,first_name,middle_name,last_name,mobile,email,address,engagement_type,job_roles,projects,supervisor_username,bank_name,iban
+W001,John,,Murphy,+353871234567,john.murphy@example.com,"12 Main St, Dublin 1",PAYE,GEN-OP;CARP,PRJ-001,s.kelly,AIB,IE29AIBK93115212345678
+W002,Ahmed,Ali,Khan,+353861112222,,"5 Bridge Rd, Cork",Sub-Contractor,STEEL,PRJ-001;PRJ-002,s.kelly,,

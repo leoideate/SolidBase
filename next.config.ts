@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@node-rs/argon2"],
   poweredByHeader: false,
+  // CSV imports (Admin → Import) send the file text to a server action; the default limit is 1 MB.
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
   // Separate build output lets e2e tests run alongside the dev server.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   outputFileTracingRoot: import.meta.dirname,

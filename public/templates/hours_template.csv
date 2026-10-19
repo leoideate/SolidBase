@@ -1,0 +1,4 @@
+worker_id,date,project_id,job_role,start,end,break_minutes,work_done
+W001,2026-10-05,PRJ-001,CARP,07:30,16:30,30,Formwork level 2
+W001,2026-10-06,PRJ-001,CARP,07:30,17:00,30,
+W002,2026-10-05,PRJ-002,STEEL,22:00,06:00,45,Night shift - rebar fixing
