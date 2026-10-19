@@ -90,7 +90,21 @@ describe("worker import", () => {
   it("numbers workers automatically and refuses a missing column", async () => {
     const r = await importWorkers(m().admin, "first_name,last_name,job_roles\nAuto,One,GEN\nAuto,Two,GEN", true);
     expect(r.rows.map((x) => x.label)).toEqual(["W004 Auto One", "W005 Auto Two"]);
-    await expect(importWorkers(m().admin, "first_name,last_name\nA,B", false)).rejects.toThrow(/Missing column: job_roles/);
+    await expect(importWorkers(m().admin, "first_name\nA", false)).rejects.toThrow(/Missing column: last_name/);
+  });
+
+  it("roles are optional, Employee means PAYE, and Excel-mangled mobiles are explained", async () => {
+    const good = "E01,Luca,Test,+353 87 123 4567,Employee,";
+    const header = "worker_id,first_name,last_name,mobile,engagement_type,job_roles";
+    const r = await importWorkers(m().admin, [header, good, "W030,Bad,Mobile,3.53835E+11,Sub-Contractor,"].join("\n"), true);
+    expect(r.rows[0].status).toBe("ok");
+    expect(r.rows[1].message).toMatch(/Format the column as Text/);
+    expect(r.committed).toBe(false);
+
+    expect((await importWorkers(m().admin, [header, good].join("\n"), true)).committed).toBe(true);
+    const e01 = await workerByCode("E01");
+    expect(e01.engagementType).toBe("paye");
+    expect(await db.select().from(schema.workerJobRoles).where(eq(schema.workerJobRoles.workerId, e01.id))).toHaveLength(0);
   });
 
   it("is admin only", async () => {

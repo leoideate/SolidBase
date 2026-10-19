@@ -13,7 +13,7 @@ import { usernameFor } from "./crew";
 import { nextWorkerCode, personValues } from "./people";
 
 /**
- * Admin bulk import of workers and past working hours from CSV (templates in docs/import/).
+ * Admin bulk import of workers and past working hours from CSV (templates in public/templates/).
  *
  * Every upload runs in one transaction, each row in its own savepoint, using the same services as
  * the screens (so the same validation, pricing, revisions and audit). A preview runs the whole
@@ -250,15 +250,22 @@ function codes(map: Map<string, string>, values: string[], what: string) {
 // Workers
 // ---------------------------------------------------------------------------
 
+/** "Sub-Contractor" → sub_contractor; "Employee" is the client's word for PAYE. */
+function engagementOf(v: string) {
+  const k = v.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_+|_+$/g, "");
+  return k === "employee" ? "paye" : k;
+}
+
 export const WORKER_COLUMNS = ["worker_id", "first_name", "middle_name", "last_name", "mobile", "email", "address", "engagement_type", "job_roles", "projects", "supervisor_username", "bank_name", "iban"];
 
 /**
  * Workers are added like a supervisor adds crew: no PIN (admin gives app access later), login name
  * from the worker ID. A worker ID that already exists is skipped, so a file can be uploaded again.
+ * Roles and projects are optional here; admin or the supervisor can allocate them later.
  */
 export async function importWorkers(actor: Actor, csv: string, commit: boolean) {
   requireAdmin(actor);
-  const items = records(csv, ["first_name", "last_name", "job_roles"]);
+  const items = records(csv, ["first_name", "last_name"]);
   const seen = new Set<string>();
   return run(actor, "workers", items, commit, async (tx, r, ctx) => {
     const given = r.get("worker_id").toUpperCase();
@@ -267,7 +274,10 @@ export async function importWorkers(actor: Actor, csv: string, commit: boolean) 
       seen.add(given);
       if (ctx.workers.has(given)) return { label: given, skip: "Already exists, skipped." };
     }
-    const engagement = r.get("engagement_type").toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_+|_+$/g, "");
+    const engagement = engagementOf(r.get("engagement_type"));
+    if (/\de\+\d/i.test(r.get("mobile"))) {
+      throw new AppError("Excel has turned the mobile number into a number like 3.53E+11 and dropped digits. Format the column as Text and re-enter it.");
+    }
     const person = personValues({
       firstName: r.get("first_name"),
       middleName: r.get("middle_name"),
@@ -278,7 +288,6 @@ export async function importWorkers(actor: Actor, csv: string, commit: boolean) 
       engagementType: engagement,
     });
     const roleIds = codes(ctx.roles, list(r.get("job_roles")), "role");
-    if (roleIds.length === 0) throw new AppError("Give at least one role code in job_roles.");
     const projectIds = codes(ctx.projects, list(r.get("projects")), "project");
     const sup = r.get("supervisor_username");
     const supervisorId = sup ? ctx.supervisors.get(sup.toUpperCase()) : undefined;

@@ -17,7 +17,7 @@ export default function ImportPage() {
         template="/templates/workers_template.csv"
         help={
           <>
-            One row per worker. <code>first_name</code>, <code>last_name</code> and <code>job_roles</code> are required. Separate several role or project codes with <code>;</code>. Leave{" "}
+            One row per worker. Only <code>first_name</code> and <code>last_name</code> are required. <code>engagement_type</code> is PAYE (or Employee), Sub-Contractor or Contractor. Separate several role or project codes with <code>;</code>; roles can also be allocated later. Leave{" "}
             <code>worker_id</code> empty to number workers automatically (W001…). A worker ID that already exists is skipped. Imported workers have no PIN: give app access from Users → Set PIN.
           </>
         }
