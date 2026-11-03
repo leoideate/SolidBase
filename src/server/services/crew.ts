@@ -1,11 +1,14 @@
-import { and, asc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "../db";
+import type { Tx } from "../db";
+import { isMoney } from "@/lib/money";
+import { repriceUnapproved } from "./rates";
 import type { Actor } from "../actor";
 import { assertCanManageWorker, managedWorkerIds } from "../authz";
 import { AppError, Forbidden, pgCode } from "../errors";
 import { parseLocalDateTime, weekStartOf } from "@/lib/time";
 import { audit } from "./audit";
-import { writeAllocations } from "./admin";
+import { resolveTypedRoles, writeAllocations } from "./admin";
 import { insertManagerEntry, mapDbError } from "./corrections";
 import { nextWorkerCode, personValues } from "./people";
 import { checkBank, writeBank } from "./bank";
@@ -61,12 +64,12 @@ export async function listCrew(actor: Actor) {
 /** Supervisor adds a worker to their crew. No PIN: the worker can't log in until admin sets one. */
 export async function addCrewWorker(
   actor: Actor,
-  input: { person: PersonInput; workerCode?: string; projectIds: string[]; jobRoleIds: string[]; bank?: BankInput },
+  input: { person: PersonInput; workerCode?: string; projectIds: string[]; jobRoleIds: string[]; typedRoles?: string[]; bank?: BankInput },
 ) {
   requireSupervisor(actor);
   const person = personValues(input.person);
   const bank = input.bank && (input.bank.bankName.trim() || input.bank.iban.trim()) ? checkBank(input.bank) : null;
-  if (input.jobRoleIds.length === 0) throw new AppError("Choose at least one role.");
+  if (input.jobRoleIds.length === 0 && !input.typedRoles?.some((r) => r.trim())) throw new AppError("Choose or type at least one role.");
   try {
     return await db.transaction(async (tx) => {
       const workerCode = input.workerCode?.trim() || (await nextWorkerCode(tx, actor.companyId));
@@ -83,7 +86,8 @@ export async function addCrewWorker(
           .insert(schema.managerAssignments)
           .values({ companyId: actor.companyId, managerId: actor.memberId, workerId: member.id, kind: "primary", createdBy: actor.memberId });
       }
-      await writeAllocations(tx, actor, member.id, input.projectIds, input.jobRoleIds);
+      const typed = await resolveTypedRoles(tx, actor, input.typedRoles ?? []);
+      await writeAllocations(tx, actor, member.id, input.projectIds, [...input.jobRoleIds, ...typed]);
       if (bank) await writeBank(tx, actor, member, bank);
       await audit(tx, actor, "crew.worker_added", "member", member.id, { workerCode });
       return member;
@@ -95,15 +99,16 @@ export async function addCrewWorker(
 }
 
 /** Supervisor changes the roles and projects of a worker in their crew. */
-export async function setCrewAllocations(actor: Actor, workerId: string, projectIds: string[], jobRoleIds: string[]) {
+export async function setCrewAllocations(actor: Actor, workerId: string, projectIds: string[], jobRoleIds: string[], typedRoles: string[] = []) {
   requireSupervisor(actor);
   await db.transaction(async (tx) => {
     await assertCanManageWorker(tx, actor, workerId);
-    await writeAllocations(tx, actor, workerId, projectIds, jobRoleIds);
+    const typed = await resolveTypedRoles(tx, actor, typedRoles);
+    await writeAllocations(tx, actor, workerId, projectIds, [...jobRoleIds, ...typed]);
   });
 }
 
-export type CrewHoursRow = { workerId: string; jobRoleId: string; start: string; end: string; breakMinutes?: number; note?: string };
+export type CrewHoursRow = { workerId: string; jobRoleId: string; start: string; end: string; breakMinutes?: number; note?: string; rate?: string };
 
 export const CREW_HOURS_REASON = "Hours entered by supervisor";
 
@@ -122,16 +127,49 @@ export async function enterCrewHours(actor: Actor, input: { date: string; projec
     if (!startAt || !endAt) throw new AppError("Enter start and end times as HH:MM.");
     if (endAt <= startAt) endAt = parseLocalDateTime(`${nextDay(input.date)}T${r.end}`)!;
     if (!r.jobRoleId) throw new AppError("Choose a role for every ticked worker.");
-    return { workerId: r.workerId, input: { projectId: input.projectId, jobRoleId: r.jobRoleId, startAt, endAt, breakMinutes: r.breakMinutes ?? 0, note: r.note } };
+    if (r.rate && !isMoney(r.rate)) throw new AppError("Rate must be a positive amount with up to 2 decimals.");
+    return { workerId: r.workerId, rate: r.rate, jobRoleId: r.jobRoleId, input: { projectId: input.projectId, jobRoleId: r.jobRoleId, startAt, endAt, breakMinutes: r.breakMinutes ?? 0, note: r.note } };
   });
   try {
     return await db.transaction(async (tx) => {
+      // Rates first so the new entries are priced with them.
+      for (const it of items) if (it.rate) await setWorkerRate(tx, actor, it.workerId, it.jobRoleId, it.rate, input.date);
       for (const it of items) await insertManagerEntry(tx, actor, it.workerId, it.input, CREW_HOURS_REASON);
       return items.length;
     });
   } catch (e) {
     mapDbError(e);
   }
+}
+
+/**
+ * A supervisor sets the hourly rate of a crew member for a role, effective from the day they enter
+ * hours for. Creates a worker-level rate; a different rate already starting that day needs admin.
+ */
+async function setWorkerRate(tx: Tx, actor: Actor, workerId: string, jobRoleId: string, hourlyRate: string, from: string) {
+  await assertCanManageWorker(tx, actor, workerId);
+  const [same] = await tx
+    .select()
+    .from(schema.rates)
+    .where(
+      and(
+        eq(schema.rates.companyId, actor.companyId),
+        eq(schema.rates.workerId, workerId),
+        eq(schema.rates.jobRoleId, jobRoleId),
+        isNull(schema.rates.projectId),
+        eq(schema.rates.effectiveFrom, from),
+      ),
+    );
+  if (same) {
+    if (Number(same.hourlyRate) === Number(hourlyRate)) return;
+    throw new AppError("This worker already has a different rate for that role starting that day. Ask admin to change it.");
+  }
+  const [rate] = await tx
+    .insert(schema.rates)
+    .values({ companyId: actor.companyId, jobRoleId, workerId, projectId: null, hourlyRate, unit: "hour", effectiveFrom: from, createdBy: actor.memberId })
+    .returning();
+  const affected = await repriceUnapproved(tx, actor.companyId);
+  await audit(tx, actor, "rate.created", "rate", rate.id, { workerId, jobRoleId, hourlyRate, effectiveFrom: from, via: "crew hours", repricedTimesheets: affected.length });
 }
 
 /** Non-void entries of the given workers that start on a Dublin date, for the crew sheet. */

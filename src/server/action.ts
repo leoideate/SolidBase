@@ -37,3 +37,8 @@ export function bool(fd: FormData, key: string): boolean {
   const v = fd.get(key);
   return v === "on" || v === "true" || v === "1";
 }
+
+/** Roles typed in the "role not in the list" box: one per line or comma separated. */
+export function typedRoles(fd: FormData): string[] {
+  return str(fd, "newRoles").split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean);
+}

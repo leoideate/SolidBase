@@ -3,7 +3,8 @@ import { requireActor } from "@/server/auth/session";
 import { db, schema } from "@/server/db";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
-import { saveRoleAction } from "../actions";
+import { STANDARD_ROLES } from "@/server/role-catalogue";
+import { loadStandardRolesAction, saveRoleAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,12 @@ export default async function JobRolesPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Roles" subtitle="Work roles a worker selects when clocking in. Set their hourly rates on the Rates page." />
+      <section className="card flex flex-wrap items-center justify-between gap-3">
+        <p className="muted max-w-prose">Add the {STANDARD_ROLES.length} standard construction roles (labourers, plant operators, trades, supervision, engineering, commercial). Roles you already have are left alone.</p>
+        <ActionForm action={loadStandardRolesAction}>
+          <SubmitButton className="btn-secondary">Load standard roles</SubmitButton>
+        </ActionForm>
+      </section>
       <div className="space-y-2">
         {roles.map((r) => (
           <ActionForm key={r.id} action={saveRoleAction} className="card grid gap-2 sm:grid-cols-[7rem_1fr_auto_auto] sm:items-center">

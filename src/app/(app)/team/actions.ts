@@ -1,6 +1,6 @@
 "use server";
 
-import { bool, runAction, str } from "@/server/action";
+import { bool, runAction, str, typedRoles } from "@/server/action";
 import type { ActionState } from "@/server/action";
 import { AppError } from "@/server/errors";
 import { addEntry, correctEntry, voidEntry } from "@/server/services/corrections";
@@ -98,6 +98,7 @@ export async function addCrewWorkerAction(_: ActionState, fd: FormData): Promise
       workerCode: str(fd, "workerCode"),
       projectIds: fd.getAll("projectIds").map(String),
       jobRoleIds: fd.getAll("jobRoleIds").map(String),
+      typedRoles: typedRoles(fd),
     });
     return "Worker added to your crew. You can now enter their hours. Ask admin for a PIN if they should use the app.";
   }, { revalidate: "/team" });
@@ -112,7 +113,7 @@ export async function crewBankAction(_: ActionState, fd: FormData): Promise<Acti
 
 export async function crewAllocationsAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
-    await setCrewAllocations(actor, str(fd, "workerId"), fd.getAll("projectIds").map(String), fd.getAll("jobRoleIds").map(String));
+    await setCrewAllocations(actor, str(fd, "workerId"), fd.getAll("projectIds").map(String), fd.getAll("jobRoleIds").map(String), typedRoles(fd));
     return "Roles and projects saved.";
   }, { revalidate: "/team" });
 }
@@ -131,6 +132,7 @@ export async function crewHoursAction(_: ActionState, fd: FormData): Promise<Act
         end: str(fd, `end_${id}`),
         breakMinutes: minutes(fd, `break_${id}`),
         note: str(fd, `note_${id}`),
+        rate: str(fd, `rate_${id}`).trim().replace(/^€/, ""),
       }));
     const n = await enterCrewHours(actor, { date: str(fd, "date"), projectId: str(fd, "projectId"), rows });
     return `Saved hours for ${n} worker${n === 1 ? "" : "s"}.`;

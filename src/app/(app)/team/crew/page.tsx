@@ -4,6 +4,7 @@ import { requireActor } from "@/server/auth/session";
 import { listCrew } from "@/server/services/crew";
 import { companyLookups } from "@/server/services/views";
 import { ActionForm, SubmitButton } from "@/components/action-form";
+import { NewRoleInput } from "@/components/role-checkboxes";
 import { PersonFields } from "@/components/person-fields";
 import { ENGAGEMENT_LABEL } from "@/lib/labels";
 import { Empty, PageHeader } from "@/components/ui";
@@ -17,8 +18,9 @@ type Lookups = Awaited<ReturnType<typeof companyLookups>>;
 function AllocationChecks({ lookups, projectIds = [], roleIds = [] }: { lookups: Lookups; projectIds?: string[]; roleIds?: string[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <fieldset className="space-y-1">
-        <legend className="label">Roles</legend>
+      <div className="space-y-3">
+      <fieldset className="max-h-72 space-y-1 overflow-y-auto">
+        <legend className="label">Roles (tick all that apply)</legend>
         {lookups.roles.filter((r) => r.isActive || roleIds.includes(r.id)).map((r) => (
           <label key={r.id} className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="jobRoleIds" value={r.id} defaultChecked={roleIds.includes(r.id)} className="size-4" />
@@ -26,6 +28,8 @@ function AllocationChecks({ lookups, projectIds = [], roleIds = [] }: { lookups:
           </label>
         ))}
       </fieldset>
+      <NewRoleInput />
+      </div>
       <fieldset className="space-y-1">
         <legend className="label">Projects</legend>
         {lookups.projects.filter((p) => p.isActive || projectIds.includes(p.id)).map((p) => (

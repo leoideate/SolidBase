@@ -8,7 +8,7 @@ import { ActionForm, SubmitButton } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
 import { maskIban } from "@/lib/money";
 import { fmtDateTime } from "@/lib/time";
-import { RoleCheckboxes } from "@/components/role-checkboxes";
+import { NewRoleInput, RoleCheckboxes } from "@/components/role-checkboxes";
 import { PersonFields } from "@/components/person-fields";
 import {
   allocationsAction,
@@ -16,6 +16,7 @@ import {
   clearBankAction,
   revealIbanAction,
   assignManagerAction,
+  assignWorkersAction,
   grantCostAction,
   resetPinAction,
   revokeCostAction,
@@ -157,8 +158,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   </label>
                 ))}
               </fieldset>
-              <fieldset className="space-y-1">
-                <legend className="label">Roles</legend>
+              <div className="space-y-3">
+              <fieldset className="max-h-72 space-y-1 overflow-y-auto">
+                <legend className="label">Roles (tick all that apply)</legend>
                 {roles.map((r) => (
                   <label key={r.id} className="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="jobRoleIds" value={r.id} defaultChecked={d.roleIds.includes(r.id)} className="size-4" />
@@ -166,6 +168,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   </label>
                 ))}
               </fieldset>
+              <NewRoleInput />
+              </div>
             </div>
             <SubmitButton>Save allocations</SubmitButton>
           </ActionForm>
@@ -226,19 +230,25 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 </li>
               ))}
             </ul>
-            <ActionForm action={assignManagerAction} className="flex flex-col gap-2 sm:flex-row">
+            <ActionForm action={assignWorkersAction} className="space-y-2" resetOnSuccess>
               <input type="hidden" name="managerId" value={m.id} />
-              <select name="workerId" className="input flex-1" required>
-                <option value="">Choose worker…</option>
-                {workers.map((x) => (
-                  <option key={x.m.id} value={x.m.id}>{x.u.displayName}</option>
+              <fieldset className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                <legend className="label px-1">Tick the workers to assign</legend>
+                {workers.filter((x) => !d.team.some((t) => t.a.workerId === x.m.id)).map((x) => (
+                  <label key={x.m.id} className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-slate-50">
+                    <input type="checkbox" name="workerId" value={x.m.id} className="size-4" /> {x.u.displayName}
+                    <span className="text-xs text-slate-500">{x.m.workerCode}</span>
+                  </label>
                 ))}
-              </select>
-              <select name="kind" className="input sm:w-36">
-                <option value="primary">Primary</option>
-                <option value="cover">Cover</option>
-              </select>
-              <SubmitButton className="btn-secondary">Assign</SubmitButton>
+                {workers.every((x) => d.team.some((t) => t.a.workerId === x.m.id)) && <p className="muted">All workers are already assigned.</p>}
+              </fieldset>
+              <div className="flex gap-2">
+                <select name="kind" className="input sm:w-36">
+                  <option value="primary">Primary</option>
+                  <option value="cover">Cover</option>
+                </select>
+                <SubmitButton className="btn-secondary">Assign ticked workers</SubmitButton>
+              </div>
             </ActionForm>
           </section>
         )}

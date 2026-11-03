@@ -3,13 +3,14 @@ import { db, schema } from "../db";
 import type { Tx } from "../db";
 import type { Actor } from "../actor";
 import { requireAdmin } from "../authz";
-import { AppError, NotFound, pgCode } from "../errors";
+import { AppError, Forbidden, NotFound, pgCode } from "../errors";
 import { hashPin, isValidPin } from "../auth/pin";
 import { isMoney } from "@/lib/money";
 import { audit } from "./audit";
 import { repriceUnapproved } from "./rates";
 import { revokeUserSessions } from "./auth";
 import { nextWorkerCode, personValues } from "./people";
+import { STANDARD_ROLES } from "../role-catalogue";
 import type { PersonInput } from "./people";
 
 /** Administration of business setup (ARD section 2, F02–F04, A01–A05). Admin only. */
@@ -254,6 +255,58 @@ export async function saveJobRole(actor: Actor, input: { id?: string; code: stri
   }
 }
 
+/** Short unique code from a role name, e.g. "Site Manager" → "SM", then "SM2" if taken. */
+function roleCodeFor(name: string, taken: Set<string>) {
+  const words = name.toUpperCase().match(/[A-Z0-9]+/g) ?? ["R"];
+  const base = (words.length > 1 ? words.map((w) => w[0]).join("") : words[0].slice(0, 4)).slice(0, 6);
+  let code = base;
+  for (let n = 2; taken.has(code); n++) code = `${base}${n}`;
+  taken.add(code);
+  return code;
+}
+
+/** Insert roles whose name (case-insensitive) isn't in the company yet; returns every matching role id, in input order. */
+async function ensureRoles(tx: Tx, actor: Actor, names: string[]) {
+  const wanted = [...new Map(names.map((n) => n.trim().replace(/\s+/g, " ")).filter(Boolean).map((n) => [n.toLowerCase(), n])).values()];
+  if (wanted.length === 0) return { ids: [] as string[], created: [] as string[] };
+  const existing = await tx.select().from(schema.jobRoles).where(eq(schema.jobRoles.companyId, actor.companyId));
+  const byName = new Map(existing.map((r) => [r.name.toLowerCase(), r]));
+  const taken = new Set(existing.map((r) => r.code));
+  const ids: string[] = [];
+  const created: string[] = [];
+  for (const name of wanted) {
+    if (name.length > 80) throw new AppError("A role name can be at most 80 characters.");
+    const hit = byName.get(name.toLowerCase());
+    if (hit) {
+      if (!hit.isActive) await tx.update(schema.jobRoles).set({ isActive: true }).where(eq(schema.jobRoles.id, hit.id));
+      ids.push(hit.id);
+      continue;
+    }
+    const [r] = await tx.insert(schema.jobRoles).values({ companyId: actor.companyId, code: roleCodeFor(name, taken), name }).returning();
+    ids.push(r.id);
+    created.push(name);
+  }
+  return { ids, created };
+}
+
+/** Admin: add the standard construction roles that the company doesn't have yet. Returns how many were added. */
+export async function loadStandardRoles(actor: Actor) {
+  requireAdmin(actor);
+  return db.transaction(async (tx) => {
+    const { created } = await ensureRoles(tx, actor, STANDARD_ROLES.map((r) => r.name));
+    await audit(tx, actor, "job_role.standard_loaded", "company", actor.companyId, { added: created.length });
+    return created.length;
+  });
+}
+
+/** Admin or supervisor: roles typed in because they aren't in the list. Existing names are reused. */
+export async function resolveTypedRoles(tx: Tx, actor: Actor, names: string[]) {
+  if (!actor.isAdmin && !actor.isManager) throw new Forbidden("Only a supervisor or administrator can add a role.");
+  const { ids, created } = await ensureRoles(tx, actor, names);
+  if (created.length) await audit(tx, actor, "job_role.created_by_typing", "company", actor.companyId, { names: created });
+  return ids;
+}
+
 // --- Rates -----------------------------------------------------------------
 
 export async function addRate(
@@ -312,10 +365,13 @@ export async function endRate(actor: Actor, rateId: string, effectiveTo: string)
 
 // --- Assignments -----------------------------------------------------------
 
-export async function setWorkerAllocations(actor: Actor, workerId: string, projectIds: string[], jobRoleIds: string[]) {
+export async function setWorkerAllocations(actor: Actor, workerId: string, projectIds: string[], jobRoleIds: string[], typedRoles: string[] = []) {
   requireAdmin(actor);
   const m = await memberInCompany(actor, workerId);
-  await db.transaction((tx) => writeAllocations(tx, actor, m.id, projectIds, jobRoleIds));
+  await db.transaction(async (tx) => {
+    const typed = await resolveTypedRoles(tx, actor, typedRoles);
+    await writeAllocations(tx, actor, m.id, projectIds, [...jobRoleIds, ...typed]);
+  });
 }
 
 /**
@@ -355,6 +411,26 @@ export async function assignManager(actor: Actor, managerId: string, workerId: s
 }
 
 /** Removing an assignment revokes access immediately (A01). */
+/** Assign several workers to one manager at once, all or nothing. */
+export async function assignWorkers(actor: Actor, managerId: string, workerIds: string[], kind: "primary" | "cover") {
+  requireAdmin(actor);
+  const ids = [...new Set(workerIds)];
+  if (ids.length === 0) throw new AppError("Tick at least one worker.");
+  const mgr = await memberInCompany(actor, managerId);
+  if (!mgr.isManager) throw new AppError("That user does not have the manager role.");
+  const workers = await Promise.all(ids.map((id) => memberInCompany(actor, id)));
+  if (workers.some((w) => !w.isWorker)) throw new AppError("Only workers can be assigned.");
+  if (ids.includes(mgr.id)) throw new AppError("A manager cannot be assigned to themselves.");
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(schema.managerAssignments)
+      .values(ids.map((workerId) => ({ companyId: actor.companyId, managerId: mgr.id, workerId, kind, createdBy: actor.memberId })))
+      .onConflictDoUpdate({ target: [schema.managerAssignments.managerId, schema.managerAssignments.workerId], set: { kind } });
+    for (const workerId of ids) await audit(tx, actor, "assignment.added", "member", workerId, { managerId: mgr.id, kind });
+  });
+  return ids.length;
+}
+
 export async function unassignManager(actor: Actor, managerId: string, workerId: string) {
   requireAdmin(actor);
   await db

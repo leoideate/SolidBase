@@ -87,3 +87,48 @@ describe("supervisor crew", () => {
     expect(r.approved).toBe(true);
   });
 });
+
+describe("typed roles", () => {
+  it("supervisor types a role that isn't in the list; it is created once and reused", async () => {
+    const joe = await addCrewWorker(m().sean, { person: { firstName: "Joe", lastName: "Nolan" }, workerCode: "W020", projectIds: [], jobRoleIds: [], typedRoles: ["Steel Fixer"] });
+    await setCrewAllocations(m().sean, joe.id, [], [s.roles.DUMP.id], ["steel  fixer", "Pipe Layer"]);
+    const roles = await db.select().from(schema.jobRoles).where(eq(schema.jobRoles.companyId, s.company.id));
+    expect(roles.filter((r) => r.name.toLowerCase() === "steel fixer")).toHaveLength(1);
+    const row = (await listCrew(m().sean)).find((w) => w.id === joe.id)!;
+    expect(row.roleIds).toHaveLength(3);
+    await expect(setCrewAllocations(m().pat, joe.id, [], [], ["X"])).rejects.toThrow();
+  });
+});
+
+describe("standard roles", () => {
+  it("admin loads the construction roles once; re-running adds nothing", async () => {
+    const { loadStandardRoles } = await import("@/server/services/admin");
+    const { STANDARD_ROLES } = await import("@/server/role-catalogue");
+    expect(await loadStandardRoles(m().admin)).toBe(STANDARD_ROLES.length);
+    expect(await loadStandardRoles(m().admin)).toBe(0);
+    await expect(loadStandardRoles(m().sean)).rejects.toThrow();
+  });
+});
+
+describe("bulk assignment", () => {
+  it("admin assigns several workers to a manager at once", async () => {
+    const { assignWorkers } = await import("@/server/services/admin");
+    expect(await assignWorkers(m().admin, m().niamh.memberId, [m().pat.memberId, m().mary.memberId], "primary")).toBe(2);
+    await expect(assignWorkers(m().admin, m().niamh.memberId, [], "primary")).rejects.toThrow(/Tick/);
+    await expect(assignWorkers(m().sean, m().niamh.memberId, [m().pat.memberId], "primary")).rejects.toThrow();
+  });
+});
+
+describe("rate entered with crew hours", () => {
+  it("supervisor sets a worker's rate while entering hours; the entry is priced with it", async () => {
+    const joe = await addJoe();
+    const date = addWeekToDate(s.lastWeek, 0);
+    await enterCrewHours(m().sean, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "07:00", end: "15:00", rate: "40.00" }] });
+    const [e] = await db.select().from(schema.workEntries).where(eq(schema.workEntries.workerId, joe.id));
+    expect(Number(e.appliedRate)).toBe(40);
+    expect(Number(e.value)).toBe(320);
+    // A different rate for the same role and day needs admin; so does a worker outside the crew.
+    await expect(enterCrewHours(m().sean, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "16:00", end: "17:00", rate: "45" }] })).rejects.toThrow(/Ask admin/);
+    await expect(enterCrewHours(m().niamh, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "16:00", end: "17:00", rate: "45" }] })).rejects.toThrow();
+  });
+});

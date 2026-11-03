@@ -6,6 +6,7 @@ import { companyLookups } from "@/server/services/views";
 import { fmtDate, fmtTime, localDate } from "@/lib/time";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { Empty, PageHeader, StatusBadge } from "@/components/ui";
+import { TickAll, TimeSelect } from "@/components/time-select";
 import { crewHoursAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -63,15 +64,16 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
           <input type="hidden" name="date" value={date} />
           <input type="hidden" name="projectId" value={projectId} />
           <p className="muted">
-            {fmtDate(date)}. Tick each worker who worked, then check their role, start, end, unpaid break (minutes) and what work was done. An end time earlier than the start counts as the next morning.
+            {fmtDate(date)}. Tick each worker who worked, then check their role, start, end (5-minute steps), unpaid break and what work was done. Type a rate only to set or change that worker's hourly rate for the role from this day; leave it blank to keep the current rate. An end time earlier than the start counts as the next morning.
           </p>
+          <TickAll />
           <ul className="divide-y divide-slate-200">
             {crew.map((w) => {
               const roleIds = w.roleIds.length ? w.roleIds : lookups.roles.filter((r) => r.isActive).map((r) => r.id);
               const done = entries.filter((e) => e.workerId === w.id);
               const sheet = sheets.find((s) => s.workerId === w.id);
               return (
-                <li key={w.id} className="grid gap-2 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1.5fr)_1.3fr_6.5rem_6.5rem_5.5rem_2fr] lg:items-center">
+                <li key={w.id} className="grid gap-2 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1.5fr)_1.3fr_9rem_9rem_7.5rem_6rem_1.5fr] lg:items-center">
                   <input type="hidden" name="workerId" value={w.id} />
                   <label className="flex items-start gap-2">
                     <input type="checkbox" name={`on_${w.id}`} className="mt-1 size-5" aria-label={`${w.name} worked`} disabled={sheet?.status === "approved"} />
@@ -98,9 +100,14 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
                       </option>
                     ))}
                   </select>
-                  <input type="time" name={`start_${w.id}`} className="input" defaultValue="07:00" aria-label={`${w.name} start`} />
-                  <input type="time" name={`end_${w.id}`} className="input" defaultValue="15:30" aria-label={`${w.name} end`} />
-                  <input type="number" name={`break_${w.id}`} className="input" min={0} max={600} defaultValue={30} aria-label={`${w.name} unpaid break minutes`} title="Unpaid break (minutes)" />
+                  <TimeSelect name={`start_${w.id}`} defaultValue="07:00" label={`${w.name} start`} />
+                  <TimeSelect name={`end_${w.id}`} defaultValue="15:30" label={`${w.name} end`} />
+                  <select name={`break_${w.id}`} className="input" defaultValue="30" aria-label={`${w.name} unpaid break minutes`} title="Unpaid break (minutes)">
+                    {[0, 15, 30, 45, 60, 75, 90].map((n) => (
+                      <option key={n} value={n}>{n ? `${n} min break` : "No break"}</option>
+                    ))}
+                  </select>
+                  <input name={`rate_${w.id}`} inputMode="decimal" className="input" placeholder="Rate €/h" aria-label={`${w.name} hourly rate (optional)`} title="Optional. Sets this worker's hourly rate for the chosen role from this day." autoComplete="off" />
                   <input name={`note_${w.id}`} className="input" placeholder="Work done" aria-label={`${w.name} work done`} />
                 </li>
               );

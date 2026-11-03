@@ -1,6 +1,6 @@
 "use server";
 
-import { bool, runAction, str } from "@/server/action";
+import { bool, runAction, str, typedRoles } from "@/server/action";
 import type { ActionState } from "@/server/action";
 import * as admin from "@/server/services/admin";
 import { personFromForm } from "@/server/services/people";
@@ -39,7 +39,7 @@ export async function resetPinAction(_: ActionState, fd: FormData): Promise<Acti
 
 export async function allocationsAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (a) => {
-    await admin.setWorkerAllocations(a, str(fd, "memberId"), fd.getAll("projectIds").map(String), fd.getAll("jobRoleIds").map(String));
+    await admin.setWorkerAllocations(a, str(fd, "memberId"), fd.getAll("projectIds").map(String), fd.getAll("jobRoleIds").map(String), typedRoles(fd));
   }, R);
 }
 
@@ -47,6 +47,13 @@ export async function assignManagerAction(_: ActionState, fd: FormData): Promise
   return runAction(async (a) => {
     await admin.assignManager(a, str(fd, "managerId"), str(fd, "workerId"), str(fd, "kind") === "cover" ? "cover" : "primary");
     return "Assignment saved.";
+  }, R);
+}
+
+export async function assignWorkersAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (a) => {
+    const n = await admin.assignWorkers(a, str(fd, "managerId"), fd.getAll("workerId").map(String), str(fd, "kind") === "cover" ? "cover" : "primary");
+    return `${n} worker${n === 1 ? "" : "s"} assigned.`;
   }, R);
 }
 
@@ -99,6 +106,13 @@ export async function saveClientAction(_: ActionState, fd: FormData): Promise<Ac
 export async function saveRoleAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (a) => {
     await admin.saveJobRole(a, { id: str(fd, "id") || undefined, code: str(fd, "code"), name: str(fd, "name"), isActive: bool(fd, "isActive") });
+  }, R);
+}
+
+export async function loadStandardRolesAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (a) => {
+    const n = await admin.loadStandardRoles(a);
+    return n ? `Added ${n} standard construction role${n === 1 ? "" : "s"}.` : "All standard roles are already in your list.";
   }, R);
 }
 

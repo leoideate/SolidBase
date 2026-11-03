@@ -16,3 +16,14 @@ export function RoleCheckboxes({ d }: { d?: { isWorker: boolean; isManager: bool
     </fieldset>
   );
 }
+
+/** Free-text box for a work role that isn't in the list yet. Saved with the form and added to the role list. */
+export function NewRoleInput() {
+  return (
+    <div>
+      <label className="label" htmlFor="newRoles">Role not in the list?</label>
+      <textarea id="newRoles" name="newRoles" rows={2} className="input" placeholder="Type it here. Separate several roles with commas." />
+      <p className="muted mt-1">New roles are added to the company role list. Admin sets their hourly rates on the Rates page.</p>
+    </div>
+  );
+}
