@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 export type ActionState = { ok?: string; error?: string; at?: number };
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
+
+const ActionPending = createContext(false);
 
 /**
  * Form bound to a server action. Shows success only after the server confirms the save, and an
@@ -23,23 +25,31 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   confirm?: string;
 }) {
-  const [state, formAction] = useActionState(action, {});
+  const [state, formAction, pending] = useActionState(action, {});
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.ok && resetOnSuccess) ref.current?.reset();
   }, [state, resetOnSuccess]);
   return (
+    <ActionPending.Provider value={pending}>
     <form
       ref={ref}
       action={formAction}
       className={className}
-      onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
+      onSubmit={(event) => {
+        // Dispatch explicitly: React's automatic action reset also clears inputs
+        // when the server returns a validation error instead of throwing.
+        event.preventDefault();
+        if (confirm && !window.confirm(confirm)) return;
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        const data = new FormData(event.currentTarget, submitter);
+        startTransition(() => formAction(data));
       }}
     >
       {children}
       <FormMessage state={state} />
     </form>
+    </ActionPending.Provider>
   );
 }
 
@@ -60,7 +70,9 @@ export function FormMessage({ state }: { state: ActionState }) {
 }
 
 export function SubmitButton({ children, className = "btn-primary", name, value }: { children: React.ReactNode; className?: string; name?: string; value?: string }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const actionPending = useContext(ActionPending);
+  const pending = formPending || actionPending;
   return (
     <button type="submit" className={className} disabled={pending} name={name} value={value}>
       {pending ? "Saving…" : children}

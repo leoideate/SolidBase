@@ -83,3 +83,337 @@ body {
     @apply text-sm text-slate-500;
   }
 }
+
+/* Approved page designs share the warm background and content spacing. */
+body:has([data-page="team-queue"], [data-page="crew-hours"], [data-page="my-crew"], [data-page="team-overview"], [data-page="costmaster"]) {
+  background: #f5f2ec;
+}
+
+main:has(> [data-page="team-queue"], > [data-page="crew-hours"], > [data-page="my-crew"], > [data-page="team-overview"], [data-page="costmaster"]) {
+  max-width: 1280px;
+  padding-top: 40px;
+}
+
+/* Keep the existing input sizes and typography in the crew entry form. */
+[data-page="crew-hours"] .crew-hours-form .input {
+  border-color: #d9cfc1;
+}
+
+:is([data-page="my-crew"], [data-page="team-overview"], [data-page="admin-users"], [data-page="admin-projects"], [data-page="admin-roles"], [data-page="admin-rates"], [data-page="admin-import"], [data-page="admin-support"], [data-page="admin-settings"], [data-page="admin-exports"], [data-page="admin-audit"], [data-page="admin-user-detail"], [data-page="costmaster"], [data-page="team-review"], [data-page="worker-clock"], [data-page="worker-week"]) .input {
+  border-color: #d9cfc1;
+}
+:is([data-page="my-crew"], [data-page="team-overview"], [data-page="admin-users"], [data-page="admin-projects"], [data-page="admin-roles"], [data-page="admin-rates"], [data-page="admin-import"], [data-page="admin-support"], [data-page="admin-settings"], [data-page="admin-exports"], [data-page="admin-audit"], [data-page="admin-user-detail"], [data-page="costmaster"], [data-page="team-review"], [data-page="worker-clock"], [data-page="worker-week"]) .input:focus {
+  border-color: #a99576;
+  --tw-ring-color: #eee5d7;
+}
+:is([data-page="my-crew"], [data-page="team-overview"], [data-page="admin-users"], [data-page="admin-projects"], [data-page="admin-roles"], [data-page="admin-rates"], [data-page="admin-import"], [data-page="admin-support"], [data-page="admin-settings"], [data-page="admin-exports"], [data-page="admin-audit"], [data-page="admin-user-detail"], [data-page="costmaster"], [data-page="team-review"], [data-page="worker-clock"], [data-page="worker-week"]) select.input {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+[data-page="my-crew"] .crew-summary {
+  list-style: none;
+  border-radius: 4px;
+}
+[data-page="my-crew"] .crew-summary::-webkit-details-marker {
+  display: none;
+}
+[data-page="my-crew"] .crew-summary::before {
+  content: "▸";
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: -1px;
+  display: inline-block;
+  width: 1rem;
+  margin-right: 0.25rem;
+}
+[data-page="my-crew"] details[open] > .crew-summary::before {
+  content: "▾";
+}
+[data-page="my-crew"] .crew-summary:focus-visible {
+  outline: 2px solid #92754e;
+  outline-offset: 4px;
+}
+
+
+[data-page="team-overview"] .overview-stats .card {
+  border-color: #ded5c9;
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+body:has([data-page="admin-home"], [data-page="admin-users"], [data-page="admin-projects"], [data-page="admin-roles"], [data-page="admin-rates"], [data-page="admin-import"], [data-page="admin-support"], [data-page="admin-settings"], [data-page="admin-exports"], [data-page="admin-audit"], [data-page="admin-user-detail"]) {
+  background: #f5f2ec;
+}
+main:has([data-page="admin-home"], [data-page="admin-users"], [data-page="admin-projects"], [data-page="admin-roles"], [data-page="admin-rates"], [data-page="admin-import"], [data-page="admin-support"], [data-page="admin-settings"], [data-page="admin-exports"], [data-page="admin-audit"], [data-page="admin-user-detail"]) {
+  max-width: 1280px;
+  padding-top: 20px;
+}
+[data-page="admin-home"] .admin-stats .card {
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+[data-page="admin-users"] fieldset label {
+  border-color: #ded5c9;
+}
+[data-page="admin-users"] input[type="checkbox"] {
+  accent-color: #a4834e;
+}
+[data-page="admin-users"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+[data-page="admin-projects"] input[type="checkbox"] {
+  accent-color: #a4834e;
+}
+[data-page="admin-projects"] .project-summary {
+  list-style: none;
+}
+[data-page="admin-projects"] .project-summary::-webkit-details-marker {
+  display: none;
+}
+[data-page="admin-projects"] .project-summary > span:first-child::before {
+  content: "▸";
+  display: inline-block;
+  width: 1rem;
+  margin-right: 0.25rem;
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: -1px;
+  color: #a2650c;
+}
+[data-page="admin-projects"] details[open] > .project-summary > span:first-child::before {
+  content: "▾";
+}
+
+[data-page="crew-hours"] input[type="checkbox"] {
+  accent-color: #a4834e;
+}
+
+[data-page="admin-rates"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+[data-page="admin-rates"] .end-rate-form > .relative {
+  min-width: 0;
+  flex: 1;
+}
+[data-page="admin-rates"] .end-rate-form .input {
+  min-height: 36px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+[data-page="admin-support"] .support-grant-form > [role="status"],
+[data-page="admin-support"] .support-grant-form > [role="alert"] {
+  grid-column: 1 / -1;
+}
+
+[data-page="admin-exports"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+[data-page="admin-audit"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+[data-page="costmaster"] .cost-stats .card {
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+[data-page="costmaster"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+body:has([data-page="login"], [data-page="change-pin"]) {
+  background: #f5f2ec;
+}
+:is([data-page="login"], [data-page="change-pin"]) .input {
+  border-color: #d9cfc1;
+}
+:is([data-page="login"], [data-page="change-pin"]) .input:focus {
+  border-color: #a99576;
+  --tw-ring-color: #eee5d7;
+}
+
+[data-page="admin-user-detail"] .card {
+  min-width: 0;
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+[data-page="admin-user-detail"] .muted {
+  color: #66545d;
+}
+[data-page="admin-user-detail"] input[type="checkbox"] {
+  accent-color: #a4834e;
+}
+[data-page="admin-user-detail"] .user-detail-summary {
+  list-style: none;
+}
+[data-page="admin-user-detail"] .user-detail-summary::-webkit-details-marker {
+  display: none;
+}
+[data-page="admin-user-detail"] .user-detail-summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1rem;
+  margin-right: 0.25rem;
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: -1px;
+}
+[data-page="admin-user-detail"] details[open] > .user-detail-summary::before {
+  content: "▾";
+}
+[data-page="admin-user-detail"] .user-detail-summary:focus-visible {
+  outline: 2px solid #92754e;
+  outline-offset: 4px;
+}
+[data-page="admin-user-detail"] form.flex > [role="status"],
+[data-page="admin-user-detail"] form.flex > [role="alert"] {
+  flex-basis: 100%;
+}
+[data-page="admin-user-detail"] .user-bank-form > [role="status"],
+[data-page="admin-user-detail"] .user-bank-form > [role="alert"] {
+  grid-column: 1 / -1;
+}
+
+body:has([data-page="team-review"]) {
+  background: #f5f2ec;
+}
+main:has(> [data-page="team-review"]) {
+  max-width: 1280px;
+  padding-top: 40px;
+}
+[data-page="team-review"] .card {
+  min-width: 0;
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+[data-page="team-review"] .input {
+  border-color: #d9cfc1;
+}
+[data-page="team-review"] .input:focus {
+  border-color: #a99576;
+  --tw-ring-color: #eee5d7;
+}
+[data-page="team-review"] .muted {
+  color: #66545d;
+}
+[data-page="team-review"] .review-summary {
+  list-style: none;
+}
+[data-page="team-review"] .review-summary::-webkit-details-marker {
+  display: none;
+}
+[data-page="team-review"] .review-summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1rem;
+  margin-right: 0.25rem;
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: -1px;
+}
+[data-page="team-review"] details[open] > .review-summary::before {
+  content: "▾";
+}
+[data-page="team-review"] .review-summary:focus-visible {
+  outline: 2px solid #92754e;
+  outline-offset: 4px;
+}
+[data-page="team-review"] form.flex > [role="status"],
+[data-page="team-review"] form.flex > [role="alert"] {
+  flex-basis: 100%;
+}
+
+body:has([data-page="worker-clock"]) {
+  background: #f5f2ec;
+}
+main:has(> [data-page="worker-clock"]) {
+  padding-top: 40px;
+}
+[data-page="worker-clock"] .card {
+  min-width: 0;
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+body:has([data-page="worker-week"]) {
+  background: #f5f2ec;
+}
+main:has(> [data-page="worker-week"]) {
+  max-width: 1280px;
+  padding-top: 40px;
+}
+[data-page="worker-week"] .card {
+  min-width: 0;
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+[data-page="worker-week"] .muted {
+  color: #66545d;
+}
+[data-page="worker-week"] .bg-slate-50 {
+  background-color: #faf8f5;
+}
+[data-page="worker-week"] .border-slate-200 {
+  border-color: #ded5c9;
+}
+[data-page="worker-week"] a.btn-secondary {
+  border-color: #b88340;
+  background-color: #fcf5e9;
+}
+[data-page="worker-week"] a.btn-secondary:hover {
+  background-color: #f2e6d3;
+}
+
+body:has([data-page="worker-history"]) {
+  background: #f5f2ec;
+}
+main:has(> [data-page="worker-history"]) {
+  max-width: 1280px;
+  padding-top: 40px;
+}
+[data-page="worker-history"] .muted {
+  color: #66545d;
+}
+[data-page="worker-history"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+body:has([data-page="system"]) {
+  background: #f5f2ec;
+}
+main:has(> [data-page="system"]) {
+  max-width: 1280px;
+  padding-top: 40px;
+}
+[data-page="system"] .card {
+  min-width: 0;
+  border-color: #ded5c9;
+  border-radius: 18px;
+  box-shadow: none;
+}
+[data-page="system"] .muted {
+  color: #66545d;
+}
+[data-page="system"] .table tbody tr:hover {
+  background: #faf8f5;
+}
+
+/* Action feedback must span the form rather than inherit a single field column. */
+form.grid > [role="status"],
+form.grid > [role="alert"] {
+  grid-column: 1 / -1;
+}

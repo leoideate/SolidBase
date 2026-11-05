@@ -19,12 +19,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const actor = await requireActor();
   if (!actor.isAdmin) redirect("/");
   return (
-    <div className="space-y-4">
-      <nav className="-mx-1 overflow-x-auto" aria-label="Admin">
-        <ul className="flex gap-1 px-1">
+    <div className="space-y-7">
+      <nav className="-mx-1 overflow-x-auto py-1" aria-label="Admin">
+        <ul className="flex w-max min-w-full gap-2 px-1">
           {LINKS.map(([href, label]) => (
             <li key={href}>
-              <Link href={href} className="block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm whitespace-nowrap hover:border-brand-400">
+              <Link href={href} className="block rounded-xl border border-[#d8bc9e] bg-[#fcf8f2] px-4 py-2 text-sm whitespace-nowrap transition-colors hover:border-[#b58e59] hover:bg-[#f2e6d3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e]">
                 {label}
               </Link>
             </li>

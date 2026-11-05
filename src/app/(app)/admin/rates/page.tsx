@@ -6,7 +6,8 @@ import { SPECIFICITY_LABEL, specificity } from "@/server/services/rates";
 import { fmtRate } from "@/lib/money";
 import { fmtDateTime, localDate } from "@/lib/time";
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { FlagBadge, PageHeader } from "@/components/ui";
+import { DatePicker } from "@/components/date-picker";
+import { FlagBadge } from "@/components/ui";
 import { addRateAction, endRateAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,15 @@ export default async function RatesPage() {
   const today = localDate(new Date());
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Rates" subtitle="Worker pay rates (not client billing rates). The most specific active rate applies: worker + project > worker > project > role standard." />
+    <div data-page="admin-rates" className="space-y-5">
+      <div className="pb-1">
+        <div className="mb-5 flex items-center gap-3 text-xs font-semibold tracking-wide text-[#a4834e]">
+          <span aria-hidden="true" className="h-px w-10 bg-[#a4834e]" />
+          ADMINISTRATION
+        </div>
+        <h1 className="h1">Rates</h1>
+        <p className="muted mt-1 text-[#66545d]">Worker pay rates (not client billing rates). The most specific active rate applies: worker + project &gt; worker &gt; project &gt; role standard.</p>
+      </div>
 
       {problems.length > 0 && (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -30,7 +38,7 @@ export default async function RatesPage() {
             {problems.slice(0, 20).map((p) => (
               <li key={p.entryId} className="flex flex-wrap items-center gap-2">
                 <FlagBadge label={p.rateStatus === "missing" ? "No rate" : "Conflict"} />
-                <Link className="text-blue-700 hover:underline" href={`/team/timesheets/${p.timesheetId}`}>
+                <Link className="text-[#92621e] hover:underline" href={`/team/timesheets/${p.timesheetId}`}>
                   {p.workerName} · {p.projectCode} · {p.roleName} · {fmtDateTime(p.startAt)}
                 </Link>
               </li>
@@ -39,8 +47,16 @@ export default async function RatesPage() {
         </section>
       )}
 
-      <div className="card overflow-x-auto p-0 sm:p-0">
-        <table className="table">
+      <div className="overflow-x-auto rounded-[18px] border border-[#ded5c9] bg-white">
+        <table className="table min-w-[850px] table-fixed">
+          <colgroup>
+            <col />
+            <col />
+            <col className="w-28" />
+            <col className="w-32" />
+            <col className="w-32" />
+            <col className="w-[232px]" />
+          </colgroup>
           <thead>
             <tr>
               <th>Role</th>
@@ -67,11 +83,11 @@ export default async function RatesPage() {
                   <td>
                     {!r.effectiveTo && (
                       <details>
-                        <summary className="cursor-pointer text-xs text-blue-700">End</summary>
-                        <ActionForm action={endRateAction} className="mt-1 flex gap-1">
+                        <summary className="cursor-pointer text-xs text-[#92621e]">End</summary>
+                        <ActionForm action={endRateAction} className="end-rate-form mt-1 flex w-[13rem] items-center gap-1">
                           <input type="hidden" name="rateId" value={r.id} />
-                          <input type="date" name="effectiveTo" className="input min-h-9 py-1" defaultValue={today} required />
-                          <SubmitButton className="btn-secondary btn-sm">Set</SubmitButton>
+                          <DatePicker id={`end-rate-${r.id}`} name="effectiveTo" defaultValue={today} today={today} portal />
+                          <SubmitButton className="btn-secondary btn-sm border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Set</SubmitButton>
                         </ActionForm>
                       </details>
                     )}
@@ -83,13 +99,13 @@ export default async function RatesPage() {
         </table>
       </div>
 
-      <section className="card">
+      <section className="rounded-[18px] border border-[#ded5c9] bg-white p-4 sm:p-5">
         <h2 className="h2 mb-1">Add rate</h2>
-        <p className="muted mb-3">To change a rate, add a new one with a later effective date; it supersedes the earlier rate at the same level. Approved entries keep the rate they were approved with. A day rate pays the agreed amount for each day worked, whatever the hours; two day-rate entries on the same day must be combined before approval.</p>
+        <p className="muted mb-4 text-[#66545d]">To change a rate, add a new one with a later effective date; it supersedes the earlier rate at the same level. Approved entries keep the rate they were approved with. A day rate pays the agreed amount for each day worked, whatever the hours; two day-rate entries on the same day must be combined before approval.</p>
         <ActionForm action={addRateAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" resetOnSuccess>
           <div>
-            <label className="label">Role</label>
-            <select name="jobRoleId" className="input" required>
+            <label className="label" htmlFor="rate-jobRoleId">Role</label>
+            <select id="rate-jobRoleId" name="jobRoleId" className="input" required>
               <option value="">Choose…</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
@@ -97,8 +113,8 @@ export default async function RatesPage() {
             </select>
           </div>
           <div>
-            <label className="label">Worker (optional override)</label>
-            <select name="workerId" className="input">
+            <label className="label" htmlFor="rate-workerId">Worker (optional override)</label>
+            <select id="rate-workerId" name="workerId" className="input">
               <option value="">All workers</option>
               {workers.map((w) => (
                 <option key={w.m.id} value={w.m.id}>{w.u.displayName} ({w.m.workerCode})</option>
@@ -106,8 +122,8 @@ export default async function RatesPage() {
             </select>
           </div>
           <div>
-            <label className="label">Project (optional override)</label>
-            <select name="projectId" className="input">
+            <label className="label" htmlFor="rate-projectId">Project (optional override)</label>
+            <select id="rate-projectId" name="projectId" className="input">
               <option value="">All projects</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
@@ -117,23 +133,23 @@ export default async function RatesPage() {
           <div>
             <label className="label">Agreed pay rate (EUR)</label>
             <div className="flex gap-2">
-              <input name="hourlyRate" className="input flex-1" inputMode="decimal" placeholder="28.00" aria-label="Amount" required />
-              <select name="unit" className="input w-32" defaultValue="hour" aria-label="Rate type">
+              <input name="hourlyRate" className="input min-w-0 flex-1" inputMode="decimal" placeholder="28.00" aria-label="Amount" required />
+              <select name="unit" className="input w-32 shrink-0" defaultValue="hour" aria-label="Rate type">
                 <option value="hour">per hour</option>
                 <option value="day">per day</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="label">Effective from</label>
-            <input type="date" name="effectiveFrom" className="input" defaultValue={today} required />
+            <label className="label" htmlFor="rate-from">Effective from</label>
+            <DatePicker id="rate-from" name="effectiveFrom" defaultValue={today} today={today} />
           </div>
           <div>
-            <label className="label">Effective to (optional)</label>
-            <input type="date" name="effectiveTo" className="input" />
+            <label className="label" htmlFor="rate-to">Effective to (optional)</label>
+            <DatePicker id="rate-to" name="effectiveTo" defaultValue="" today={today} required={false} />
           </div>
           <div className="sm:col-span-2 lg:col-span-3">
-            <SubmitButton>Add rate</SubmitButton>
+            <SubmitButton className="btn-brand bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Add rate</SubmitButton>
           </div>
         </ActionForm>
       </section>

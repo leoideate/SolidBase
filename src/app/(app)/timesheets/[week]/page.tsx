@@ -21,10 +21,10 @@ export default async function WorkerWeekPage({ params }: { params: Promise<{ wee
   const lastReturn = [...data.comments].reverse().find((c) => c.c.kind === "return");
 
   return (
-    <div className="space-y-4">
+    <div data-page="worker-week" className="space-y-5">
       <PageHeader
         title="My week"
-        subtitle={<span className="flex items-center gap-2">{weekLabel(week)} {ts && <StatusBadge status={ts.status} />}</span>}
+        subtitle={<span className="flex flex-wrap items-center gap-2">{weekLabel(week)} {ts && <StatusBadge status={ts.status} />}</span>}
         actions={<WeekNav base="/timesheets/" week={week} prev={addWeekToDate(week, -1)} next={week < current ? addWeekToDate(week, 1) : null} label={week === current ? "This week" : weekLabel(week)} />}
       />
 
@@ -37,7 +37,7 @@ export default async function WorkerWeekPage({ params }: { params: Promise<{ wee
       )}
 
       {ts?.status === "submitted" && (
-        <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
+        <p role="status" className="rounded-xl border border-[#ded5c9] bg-[#f2ebdf] p-3 text-sm text-[#66545d]">
           Submitted (version {ts.currentVersion}). Your manager will review it.
         </p>
       )}
@@ -59,8 +59,8 @@ export default async function WorkerWeekPage({ params }: { params: Promise<{ wee
           {canSubmit ? (
             <ActionForm action={submitAction} className="space-y-3" confirm="Submit this week's timesheet? You will not be able to change entries yourself after submitting.">
               <input type="hidden" name="timesheetId" value={ts.id} />
-              <textarea name="comment" className="input min-h-20" placeholder="Optional note for your manager" />
-              <SubmitButton className="btn-brand w-full sm:w-auto">{ts.status === "returned" ? "Resubmit" : "Submit for approval"}</SubmitButton>
+              <textarea aria-label="Optional note for your manager" name="comment" className="input min-h-20" placeholder="Optional note for your manager" />
+              <SubmitButton className="btn-brand w-full bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e] sm:w-auto">{ts.status === "returned" ? "Resubmit" : "Submit for approval"}</SubmitButton>
             </ActionForm>
           ) : (
             <p className="muted">You can submit once the week has ended (from Monday 00:00).</p>
@@ -74,7 +74,7 @@ export default async function WorkerWeekPage({ params }: { params: Promise<{ wee
           <p className="muted mb-3">You can&apos;t edit entries yourself. Tell your manager what needs correcting.</p>
           <ActionForm action={commentAction} className="space-y-3" resetOnSuccess>
             <input type="hidden" name="timesheetId" value={ts.id} />
-            <select name="entryId" className="input">
+            <select aria-label="Message relates to" name="entryId" className="input">
               <option value="">General message</option>
               {data.entries.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -82,8 +82,8 @@ export default async function WorkerWeekPage({ params }: { params: Promise<{ wee
                 </option>
               ))}
             </select>
-            <textarea name="body" className="input min-h-20" required placeholder="e.g. I was on P002, not P001, on Tuesday" />
-            <SubmitButton className="btn-secondary">Send to manager</SubmitButton>
+            <textarea aria-label="Message for your manager" name="body" className="input min-h-20" required placeholder="e.g. I was on P002, not P001, on Tuesday" />
+            <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Send to manager</SubmitButton>
           </ActionForm>
         </section>
       )}

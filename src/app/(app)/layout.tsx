@@ -18,23 +18,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900 text-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white p-1">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/solidbase-mark.svg" alt="SolidBase" className="h-full w-full" />
-            </div>
-            <div className="min-w-0">
+      <header className="sticky top-0 z-20 border-b border-[#eee9e2] bg-white text-slate-950">
+        <div className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-x-8 xl:py-4">
+          <div className="flex min-w-0 items-center gap-4 sm:gap-7">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/solidbase-logo.svg" alt="Solid Base Limited" width={110} height={60} className="h-12 w-[88px] shrink-0 object-contain xl:h-[60px] xl:w-[110px]" />
+            <div className="min-w-0 border-l border-[#e5dbce] py-1 pl-4 sm:pl-7 xl:w-36">
               <div className="truncate text-sm font-semibold">{actor.displayName}</div>
-              <div className="truncate text-xs text-slate-400">{roles || "CostMaster"}</div>
+              <div className="mt-1 truncate text-xs text-[#66545d]">{roles || "CostMaster"}</div>
             </div>
           </div>
-          <form action={logoutAction}>
-            <button className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white">{t.nav.logout}</button>
+          <NavLinks links={links} />
+          <form action={logoutAction} className="col-start-2 row-start-1 justify-self-end xl:col-start-3">
+            <button className="min-h-11 rounded-xl px-3 py-2 text-sm text-slate-950 transition-colors hover:bg-[#f5f1eb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e]">{t.nav.logout}</button>
           </form>
         </div>
-        <NavLinks links={links} />
       </header>
       <main className="mx-auto max-w-6xl px-4 py-5 pb-16">{children}</main>
     </div>

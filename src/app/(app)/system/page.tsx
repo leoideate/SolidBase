@@ -5,7 +5,7 @@ import { requireActor } from "@/server/auth/session";
 import { db, schema } from "@/server/db";
 import { hasSupportAccess } from "@/server/authz";
 import { fmtDateTime } from "@/lib/time";
-import { PageHeader, Stat } from "@/components/ui";
+import { Stat } from "@/components/ui";
 import pkg from "../../../../package.json";
 
 export const dynamic = "force-dynamic";
@@ -31,8 +31,15 @@ export default async function SystemPage() {
   const support = await hasSupportAccess(db, actor);
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="System" subtitle={`Version ${pkg.version} · ${process.env.NODE_ENV}`} />
+    <div data-page="system" className="space-y-5">
+      <div className="pb-1">
+        <div className="mb-5 flex items-center gap-3 text-xs font-semibold tracking-wide text-[#a4834e]">
+          <span aria-hidden="true" className="h-px w-10 bg-[#a4834e]" />
+          SYSTEM
+        </div>
+        <h1 className="h1">System</h1>
+        <p className="muted mt-1">Version {pkg.version} · {process.env.NODE_ENV}</p>
+      </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Database" value={dbOk ? "Healthy" : "Unavailable"} tone={dbOk ? "good" : "default"} sub={`${latency} ms round trip`} />
         <Stat label="PostgreSQL" value={dbInfo.version || "—"} sub={dbInfo.size} />
@@ -44,17 +51,18 @@ export default async function SystemPage() {
         {support ? (
           <p className="text-sm">
             An administrator has granted you temporary read-only support access.{" "}
-            <Link href="/team/overview?week=all" className="text-blue-700 underline">Open read-only team overview</Link>
+            <Link href="/team/overview?week=all" className="text-[#92621e] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e]">Open read-only team overview</Link>
           </p>
         ) : (
           <p className="muted">You have no access to worker or financial records. An administrator can grant temporary, read-only support access.</p>
         )}
       </section>
-      <section className="card overflow-x-auto">
-        <h2 className="h2 mb-2">Error log</h2>
+      <section className="card overflow-hidden p-0 sm:p-0">
+        <h2 className="h2 px-4 pt-4 sm:px-5 sm:pt-5">Error log</h2>
         {errors.length === 0 ? (
-          <p className="muted">No errors recorded.</p>
+          <p className="muted px-4 py-5 sm:px-5">No errors recorded.</p>
         ) : (
+          <div className="mt-3 overflow-x-auto">
           <table className="table">
             <thead>
               <tr><th>When</th><th>Message</th></tr>
@@ -68,6 +76,7 @@ export default async function SystemPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>

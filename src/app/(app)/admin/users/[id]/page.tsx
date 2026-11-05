@@ -5,7 +5,6 @@ import { listMembers, memberDetail } from "@/server/services/admin-views";
 import { companyLookups } from "@/server/services/views";
 import { AppError } from "@/server/errors";
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { PageHeader } from "@/components/ui";
 import { maskIban } from "@/lib/money";
 import { fmtDateTime } from "@/lib/time";
 import { NewRoleInput, RoleCheckboxes } from "@/components/role-checkboxes";
@@ -47,12 +46,20 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const recentBankChange = !!m.ibanLast4 && !!m.bankUpdatedAt && Date.now() - m.bankUpdatedAt.getTime() < 30 * 86_400_000;
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title={u.displayName}
-        subtitle={`${u.username} · ${m.workerCode} · ${m.isActive ? "Active" : "Deactivated"}`}
-        actions={<Link href="/admin/users" className="btn-secondary">All users</Link>}
-      />
+    <div data-page="admin-user-detail" className="space-y-5">
+      <div className="pb-1">
+        <div className="mb-5 flex items-center gap-3 text-xs font-semibold tracking-wide text-[#a4834e]">
+          <span aria-hidden="true" className="h-px w-10 bg-[#a4834e]" />
+          ADMINISTRATION
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0 break-words">
+            <h1 className="h1">{u.displayName}</h1>
+            <p className="muted mt-1 text-[#66545d]">{u.username} · {m.workerCode} · {m.isActive ? "Active" : "Deactivated"}</p>
+          </div>
+          <Link href="/admin/users" className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">All users</Link>
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card">
@@ -61,7 +68,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <input type="hidden" name="memberId" value={m.id} />
             <PersonFields p={{ ...u, engagementType: m.engagementType }} workerCode={m.workerCode} autoCode={false} />
             <RoleCheckboxes d={m} />
-            <SubmitButton>Save</SubmitButton>
+            <SubmitButton className="btn-brand bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Save</SubmitButton>
           </ActionForm>
         </section>
 
@@ -69,13 +76,13 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <div>
             <h2 className="h2 mb-2">{u.pinHash ? "Reset PIN" : "Set PIN (gives app access)"}</h2>
             {!u.pinHash && <p className="muted mb-2">Added by a supervisor, with no app login yet. After you set a PIN, give the worker their login name <strong>{u.username}</strong> and the temporary PIN.</p>}
-            <ActionForm action={resetPinAction} className="flex flex-col gap-2 sm:flex-row" resetOnSuccess>
+            <ActionForm action={resetPinAction} className="flex flex-col flex-wrap gap-2 sm:flex-row" resetOnSuccess>
               <input type="hidden" name="memberId" value={m.id} />
-              <input name="pin" className="input flex-1" placeholder="New temporary 6-digit PIN" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="off" />
-              <SubmitButton className="btn-secondary">{u.pinHash ? "Reset PIN" : "Set PIN"}</SubmitButton>
+              <input name="pin" className="input min-w-0 flex-1" placeholder="New temporary 6-digit PIN" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="off" />
+              <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">{u.pinHash ? "Reset PIN" : "Set PIN"}</SubmitButton>
             </ActionForm>
           </div>
-          <div className="border-t border-slate-200 pt-4">
+          <div className="border-t border-[#ded5c9] pt-4">
             <h2 className="h2 mb-2">{m.isActive ? "Deactivate account" : "Reactivate account"}</h2>
             <p className="muted mb-2">{m.isActive ? "Stops new logins immediately. Records and history are kept." : "Allows this user to log in again."}</p>
             <ActionForm action={setActiveAction} confirm={m.isActive ? `Deactivate ${u.displayName}?` : undefined}>
@@ -115,7 +122,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           {m.ibanLast4 && (
             <ActionForm action={revealIbanAction}>
               <input type="hidden" name="memberId" value={m.id} />
-              <SubmitButton className="btn-secondary btn-sm">Show full IBAN</SubmitButton>
+              <SubmitButton className="btn-secondary btn-sm border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Show full IBAN</SubmitButton>
             </ActionForm>
           )}
           {m.ibanLast4 && (
@@ -126,8 +133,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           )}
         </div>
         <details>
-          <summary className="cursor-pointer text-sm font-semibold text-blue-700">{m.ibanLast4 ? "Change bank details" : "+ Add bank details"}</summary>
-          <ActionForm action={bankDetailsAction} className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end" resetOnSuccess>
+          <summary className="user-detail-summary cursor-pointer text-sm font-semibold text-[#92621e]">{m.ibanLast4 ? "Change bank details" : "Add bank details"}</summary>
+          <ActionForm action={bankDetailsAction} className="user-bank-form mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end" resetOnSuccess>
             <input type="hidden" name="memberId" value={m.id} />
             <div>
               <label className="label" htmlFor="bankName">Bank name</label>
@@ -137,7 +144,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <label className="label" htmlFor="iban">IBAN</label>
               <input id="iban" name="iban" className="input font-mono uppercase" placeholder="IE29 AIBK 9311 5212 3456 78" autoComplete="off" spellCheck={false} required />
             </div>
-            <SubmitButton>Save</SubmitButton>
+            <SubmitButton className="btn-brand bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Save</SubmitButton>
           </ActionForm>
         </details>
       </section>
@@ -153,7 +160,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 <legend className="label">Projects</legend>
                 {projects.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="projectIds" value={p.id} defaultChecked={d.projectIds.includes(p.id)} className="size-4" />
+                    <input type="checkbox" name="projectIds" value={p.id} defaultChecked={d.projectIds.includes(p.id)} className="size-4 shrink-0" />
                     {p.code} · {p.name} {!p.isActive && <span className="text-xs text-slate-400">(inactive)</span>}
                   </label>
                 ))}
@@ -163,7 +170,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 <legend className="label">Roles (tick all that apply)</legend>
                 {roles.map((r) => (
                   <label key={r.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="jobRoleIds" value={r.id} defaultChecked={d.roleIds.includes(r.id)} className="size-4" />
+                    <input type="checkbox" name="jobRoleIds" value={r.id} defaultChecked={d.roleIds.includes(r.id)} className="size-4 shrink-0" />
                     {r.name} {!r.isActive && <span className="text-xs text-slate-400">(inactive)</span>}
                   </label>
                 ))}
@@ -171,7 +178,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <NewRoleInput />
               </div>
             </div>
-            <SubmitButton>Save allocations</SubmitButton>
+            <SubmitButton className="btn-brand bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Save allocations</SubmitButton>
           </ActionForm>
         </section>
       )}
@@ -183,21 +190,21 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <ul className="space-y-2">
               {d.managers.length === 0 && <li className="muted">No manager assigned. Nobody can approve this worker&apos;s hours except admin.</li>}
               {d.managers.map(({ a, name }) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <li key={a.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#faf8f5] px-3 py-2 text-sm">
                   <span>
                     {name} <span className="text-xs text-slate-500">({a.kind})</span>
                   </span>
                   <ActionForm action={unassignManagerAction}>
                     <input type="hidden" name="managerId" value={a.managerId} />
                     <input type="hidden" name="workerId" value={m.id} />
-                    <SubmitButton className="btn-secondary btn-sm">Remove</SubmitButton>
+                    <SubmitButton className="btn-secondary btn-sm border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Remove</SubmitButton>
                   </ActionForm>
                 </li>
               ))}
             </ul>
-            <ActionForm action={assignManagerAction} className="flex flex-col gap-2 sm:flex-row">
+            <ActionForm action={assignManagerAction} className="flex flex-col flex-wrap gap-2 sm:flex-row">
               <input type="hidden" name="workerId" value={m.id} />
-              <select name="managerId" className="input flex-1" required>
+              <select name="managerId" className="input min-w-0 flex-1" required>
                 <option value="">Choose manager…</option>
                 {managers.map((x) => (
                   <option key={x.m.id} value={x.m.id}>{x.u.displayName}</option>
@@ -207,7 +214,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 <option value="primary">Primary</option>
                 <option value="cover">Cover</option>
               </select>
-              <SubmitButton className="btn-secondary">Assign</SubmitButton>
+              <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Assign</SubmitButton>
             </ActionForm>
           </section>
         )}
@@ -218,25 +225,25 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <ul className="space-y-2">
               {d.team.length === 0 && <li className="muted">No workers assigned.</li>}
               {d.team.map(({ a, name }) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <li key={a.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#faf8f5] px-3 py-2 text-sm">
                   <span>
                     {name} <span className="text-xs text-slate-500">({a.kind})</span>
                   </span>
                   <ActionForm action={unassignManagerAction}>
                     <input type="hidden" name="managerId" value={m.id} />
                     <input type="hidden" name="workerId" value={a.workerId} />
-                    <SubmitButton className="btn-secondary btn-sm">Remove</SubmitButton>
+                    <SubmitButton className="btn-secondary btn-sm border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Remove</SubmitButton>
                   </ActionForm>
                 </li>
               ))}
             </ul>
             <ActionForm action={assignWorkersAction} className="space-y-2" resetOnSuccess>
               <input type="hidden" name="managerId" value={m.id} />
-              <fieldset className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+              <fieldset className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-[#ded5c9] p-2">
                 <legend className="label px-1">Tick the workers to assign</legend>
                 {workers.filter((x) => !d.team.some((t) => t.a.workerId === x.m.id)).map((x) => (
-                  <label key={x.m.id} className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-slate-50">
-                    <input type="checkbox" name="workerId" value={x.m.id} className="size-4" /> {x.u.displayName}
+                  <label key={x.m.id} className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-[#faf8f5]">
+                    <input type="checkbox" name="workerId" value={x.m.id} className="size-4 shrink-0" /> {x.u.displayName}
                     <span className="text-xs text-slate-500">{x.m.workerCode}</span>
                   </label>
                 ))}
@@ -247,7 +254,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   <option value="primary">Primary</option>
                   <option value="cover">Cover</option>
                 </select>
-                <SubmitButton className="btn-secondary">Assign ticked workers</SubmitButton>
+                <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Assign ticked workers</SubmitButton>
               </div>
             </ActionForm>
           </section>
@@ -259,29 +266,29 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <ul className="space-y-2">
             {d.costGrants.length === 0 && <li className="muted">No CostMaster access.</li>}
             {d.costGrants.map(({ g, projectCode }) => (
-              <li key={g.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+              <li key={g.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#faf8f5] px-3 py-2 text-sm">
                 <span>
-                  {projectCode ?? "All projects"} {g.canExport && <span className="badge bg-blue-100 text-blue-800">Export</span>}
+                  {projectCode ?? "All projects"} {g.canExport && <span className="badge bg-[#f2ebdf] text-[#92621e]">Export</span>}
                 </span>
                 <ActionForm action={revokeCostAction}>
                   <input type="hidden" name="grantId" value={g.id} />
-                  <SubmitButton className="btn-secondary btn-sm">Remove</SubmitButton>
+                  <SubmitButton className="btn-secondary btn-sm border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Remove</SubmitButton>
                 </ActionForm>
               </li>
             ))}
           </ul>
-          <ActionForm action={grantCostAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <ActionForm action={grantCostAction} className="flex flex-col flex-wrap gap-2 sm:flex-row sm:items-center">
             <input type="hidden" name="memberId" value={m.id} />
-            <select name="projectId" className="input flex-1">
+            <select name="projectId" className="input min-w-0 flex-1">
               <option value="">All projects</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
               ))}
             </select>
             <label className="flex items-center gap-2 text-sm whitespace-nowrap">
-              <input type="checkbox" name="canExport" className="size-4" /> Can export
+              <input type="checkbox" name="canExport" className="size-4 shrink-0" /> Can export
             </label>
-            <SubmitButton className="btn-secondary">Grant</SubmitButton>
+            <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Grant</SubmitButton>
           </ActionForm>
         </section>
       </div>

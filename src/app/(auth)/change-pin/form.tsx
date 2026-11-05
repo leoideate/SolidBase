@@ -22,7 +22,7 @@ export function ChangePinForm() {
         <label className="label" htmlFor="confirmPin">Repeat new PIN</label>
         <input id="confirmPin" name="confirmPin" autoComplete="new-password" {...pinProps} />
       </div>
-      <SubmitButton className="btn-primary w-full">Save PIN</SubmitButton>
+      <SubmitButton className="btn-brand w-full bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Save PIN</SubmitButton>
       <FormMessage state={state} />
     </form>
   );

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireActor } from "@/server/auth/session";
 import { workerHistory } from "@/server/services/views";
 import { weekLabel } from "@/lib/time";
-import { Empty, Hours, Money, PageHeader, StatusBadge } from "@/components/ui";
+import { Hours, Money, PageHeader, StatusBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +13,12 @@ export default async function HistoryPage() {
   const weeks = await workerHistory(actor, actor.memberId);
   const approved = weeks.filter((w) => w.status === "approved");
   return (
-    <div className="space-y-4">
+    <div data-page="worker-history" className="space-y-5">
       <PageHeader title="History" subtitle="Your weekly timesheets. Approved values are before deductions." />
       {weeks.length === 0 ? (
-        <Empty>No timesheets yet.</Empty>
+        <div className="flex min-h-[90px] items-center justify-center rounded-[18px] border border-[#ded5c9] bg-white p-6 text-center text-sm text-[#66545d]">No timesheets yet.</div>
       ) : (
-        <div className="card overflow-x-auto p-0 sm:p-0">
+        <div className="overflow-x-auto rounded-[18px] border border-[#ded5c9] bg-white">
           <table className="table">
             <thead>
               <tr>
@@ -32,7 +32,7 @@ export default async function HistoryPage() {
               {weeks.map((w) => (
                 <tr key={w.id}>
                   <td>
-                    <Link className="font-medium text-blue-700 underline-offset-2 hover:underline" href={`/timesheets/${w.weekStart}`}>
+                    <Link className="font-medium text-[#92621e] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e]" href={`/timesheets/${w.weekStart}`}>
                       {weekLabel(w.weekStart)}
                     </Link>
                   </td>
