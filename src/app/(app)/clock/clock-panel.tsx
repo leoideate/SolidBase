@@ -85,7 +85,7 @@ export function ClockPanel({ open, projects, roles, t }: { open: OpenInfo; proje
     ) : phase.kind === "uncertain" ? (
       <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
         <p>{t.uncertain}</p>
-        <button className="btn-brand btn-sm mt-2" onClick={() => pending && send(pending)}>
+        <button className="btn-brand btn-sm mt-2 bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]" onClick={() => pending && send(pending)}>
           Retry
         </button>
       </div>
@@ -93,7 +93,7 @@ export function ClockPanel({ open, projects, roles, t }: { open: OpenInfo; proje
 
   if (open) {
     return (
-      <section className="card space-y-4 border-brand-400 ring-2 ring-brand-200">
+      <section className="card space-y-4 ring-2 ring-[#eee5d7]">
         <div className="flex items-center gap-2">
           <span className="relative flex size-3">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -103,18 +103,18 @@ export function ClockPanel({ open, projects, roles, t }: { open: OpenInfo; proje
         </div>
         <div>
           <div className="text-4xl font-black tabular-nums">{elapsed(open.startAt, now)}</div>
-          <div className="mt-1 text-sm text-slate-600">
+          <div className="mt-1 text-sm text-[#66545d]">
             {t.since} {timeFmt.format(new Date(open.startAt))}
           </div>
         </div>
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <div className="rounded-xl bg-slate-50 p-3">
-            <dt className="text-xs text-slate-500">{t.project}</dt>
-            <dd className="font-semibold">{open.project}</dd>
+          <div className="rounded-xl bg-[#faf8f5] p-3">
+            <dt className="text-xs text-[#66545d]">{t.project}</dt>
+            <dd className="break-words font-semibold">{open.project}</dd>
           </div>
-          <div className="rounded-xl bg-slate-50 p-3">
-            <dt className="text-xs text-slate-500">{t.role}</dt>
-            <dd className="font-semibold">{open.role}</dd>
+          <div className="rounded-xl bg-[#faf8f5] p-3">
+            <dt className="text-xs text-[#66545d]">{t.role}</dt>
+            <dd className="break-words font-semibold">{open.role}</dd>
           </div>
         </dl>
         <button
@@ -133,7 +133,7 @@ export function ClockPanel({ open, projects, roles, t }: { open: OpenInfo; proje
     return (
       <section className="card">
         <h1 className="h2">{t.title}</h1>
-        <p className="mt-2 text-sm text-slate-600">{t.noAssignments}</p>
+        <p className="mt-2 text-sm text-[#66545d]">{t.noAssignments}</p>
       </section>
     );
   }

@@ -6,7 +6,7 @@ import { canExportTeam, hasSupportAccess } from "@/server/authz";
 import { companyLookups, teamOverview } from "@/server/services/views";
 import { addWeekToDate, isWeekStart, weekLabel, weekStartOf } from "@/lib/time";
 import { fmtMoney, hours } from "@/lib/money";
-import { Empty, Hours, Money, PageHeader, Stat, StatusBadge } from "@/components/ui";
+import { Hours, Money, Stat, StatusBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -28,16 +28,24 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
   const exportQs = new URLSearchParams({ scope: "team", from: exportFrom, to: exportTo, ...(sp.worker ? { worker: sp.worker } : {}), ...(sp.project ? { project: sp.project } : {}) });
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Team overview"
-        subtitle={actor.isAdmin ? "Whole business" : actor.isManager ? "Your assigned workers only" : "Read-only support access"}
-        actions={canExport ? <a className="btn-brand" href={`/api/export?${exportQs}`}>Download approved CSV</a> : undefined}
-      />
-      <form className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-5" method="get">
+    <div data-page="team-overview" className="space-y-5">
+      <div className="pb-2">
+        <div className="mb-5 flex items-center gap-3 text-xs font-semibold tracking-wide text-[#a4834e]">
+          <span aria-hidden="true" className="h-px w-10 bg-[#a4834e]" />
+          TEAM MANAGEMENT
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="h1">Team overview</h1>
+            <p className="muted mt-1 text-[#66545d]">{actor.isAdmin ? "Whole business" : actor.isManager ? "Your assigned workers only" : "Read-only support access"}</p>
+          </div>
+          {canExport && <a className="btn-secondary border-[#b88340] bg-[#fcf5e9]! px-6 hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]" href={`/api/export?${exportQs}`}>Download approved CSV</a>}
+        </div>
+      </div>
+      <form className="grid gap-4 rounded-[20px] border border-[#ded5c9] bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.65fr)_minmax(0,0.65fr)_minmax(7rem,0.65fr)] sm:p-5" method="get">
         <div>
-          <label className="label">Week</label>
-          <select name="week" className="input" defaultValue={week ?? "all"}>
+          <label className="label" htmlFor="overview-week">Week</label>
+          <select id="overview-week" name="week" className="input" defaultValue={week ?? "all"}>
             <option value="all">All weeks</option>
             {weeks.map((w) => (
               <option key={w} value={w}>{weekLabel(w)}</option>
@@ -45,8 +53,8 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
           </select>
         </div>
         <div>
-          <label className="label">Worker</label>
-          <select name="worker" className="input" defaultValue={sp.worker ?? ""}>
+          <label className="label" htmlFor="overview-worker">Worker</label>
+          <select id="overview-worker" name="worker" className="input" defaultValue={sp.worker ?? ""}>
             <option value="">All</option>
             {data.workers.map((w) => (
               <option key={w.id} value={w.id}>{w.name}</option>
@@ -54,8 +62,8 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
           </select>
         </div>
         <div>
-          <label className="label">Project</label>
-          <select name="project" className="input" defaultValue={sp.project ?? ""}>
+          <label className="label" htmlFor="overview-project">Project</label>
+          <select id="overview-project" name="project" className="input" defaultValue={sp.project ?? ""}>
             <option value="">All</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
@@ -63,8 +71,8 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
           </select>
         </div>
         <div>
-          <label className="label">Status</label>
-          <select name="status" className="input" defaultValue={sp.status ?? ""}>
+          <label className="label" htmlFor="overview-status">Status</label>
+          <select id="overview-status" name="status" className="input" defaultValue={sp.status ?? ""}>
             <option value="">All</option>
             {["draft", "submitted", "returned", "approved"].map((s) => (
               <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
@@ -72,18 +80,19 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
           </select>
         </div>
         <div className="flex items-end">
-          <button className="btn-primary w-full">Apply</button>
+          <button className="btn-secondary w-full border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Apply</button>
         </div>
       </form>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Stat label="Approved hours" value={hours(data.approved.seconds)} tone="good" />
-        <Stat label="Approved labour value" value={fmtMoney(data.approved.value)} tone="good" sub="Agreed worker rates, before deductions" />
+      <div className="overview-stats grid gap-4 sm:grid-cols-2">
+        <Stat label="Approved hours" value={hours(data.approved.seconds)} />
+        <Stat label="Approved labour value" value={fmtMoney(data.approved.value)} sub="Agreed worker rates, before deductions" />
       </div>
 
       {data.byProjectRole.length > 0 && (
-        <section className="card overflow-x-auto p-0 sm:p-0">
+        <section className="overflow-hidden rounded-[18px] border border-[#ded5c9] bg-white">
           <h2 className="h2 px-4 pt-4">Approved by project and role</h2>
+          <div className="overflow-x-auto">
           <table className="table mt-2">
             <thead>
               <tr><th>Project</th><th>Role</th><th className="num">Hours</th><th className="num">Rate</th><th className="num">Value</th></tr>
@@ -100,16 +109,17 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
               ))}
             </tbody>
           </table>
+          </div>
         </section>
       )}
 
-      <section className="space-y-2">
-        <h2 className="h2">Timesheets</h2>
+      <section className="overflow-hidden rounded-[18px] border border-[#ded5c9] bg-white">
+        <h2 className="h2 px-4 pt-4">Timesheets</h2>
         {data.sheets.length === 0 ? (
-          <Empty>No timesheets match these filters.</Empty>
+          <div className="flex min-h-[90px] items-center justify-center p-6 text-center text-sm text-[#66545d]">No timesheets match these filters.</div>
         ) : (
-          <div className="card overflow-x-auto p-0 sm:p-0">
-            <table className="table">
+          <div className="overflow-x-auto">
+            <table className="table mt-2">
               <thead>
                 <tr><th>Worker</th><th>Week</th><th>Status</th><th className="num">Hours</th><th className="num">Value</th></tr>
               </thead>
@@ -117,7 +127,7 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
                 {data.sheets.map((s) => (
                   <tr key={s.ts.id}>
                     <td>
-                      <Link className="font-medium text-blue-700 hover:underline" href={`/team/timesheets/${s.ts.id}`}>{s.name}</Link>
+                      <Link className="font-medium text-[#92621e] hover:underline focus-visible:outline-2 focus-visible:outline-[#92754e]" href={`/team/timesheets/${s.ts.id}`}>{s.name}</Link>
                       <div className="text-xs text-slate-500">{s.workerCode}</div>
                     </td>
                     <td className="whitespace-nowrap">{weekLabel(s.ts.weekStart)}</td>

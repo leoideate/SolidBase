@@ -20,7 +20,7 @@ export function LoginForm() {
         </label>
         <input id="pin" name="pin" className="input tracking-[0.4em]" type="password" inputMode="numeric" pattern="\d{6}" maxLength={6} autoComplete="current-password" required />
       </div>
-      <SubmitButton className="btn-primary w-full">Log in</SubmitButton>
+      <SubmitButton className="btn-brand w-full bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Log in</SubmitButton>
       <FormMessage state={state} />
     </form>
   );

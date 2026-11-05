@@ -30,49 +30,49 @@ export default async function CostsPage({ searchParams }: { searchParams: SP }) 
   const qs = (extra: Record<string, string>) => new URLSearchParams({ from, to, ...(sp.project ? { project: sp.project } : {}), ...extra }).toString();
 
   return (
-    <div className="space-y-4">
+    <div data-page="costmaster" className="space-y-4">
       <PageHeader
         title="CostMaster"
         subtitle={r.allProjects ? "All projects" : `${r.projects.length} authorised project(s)`}
-        actions={r.canExport ? <a className="btn-brand" href={`/api/export?${new URLSearchParams({ scope: "costmaster", from, to, ...(sp.project ? { project: sp.project } : {}) })}`}>Download CSV</a> : undefined}
+        actions={r.canExport ? <a className="btn-secondary border-[#b88340] bg-[#fcf5e9]! px-6 hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]" href={`/api/export?${new URLSearchParams({ scope: "costmaster", from, to, ...(sp.project ? { project: sp.project } : {}) })}`}>Download CSV</a> : undefined}
       />
-      <p className="rounded-xl bg-blue-50 px-3 py-2 text-sm text-blue-900">
+      <p className="rounded-xl border border-[#ded5c9] bg-white px-4 py-3 text-sm text-[#66545d]">
         <strong>Cost basis:</strong> {COST_BASIS}
       </p>
 
-      <form className="card grid gap-3 sm:grid-cols-4" method="get">
+      <form className="grid gap-4 rounded-[18px] border border-[#ded5c9] bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(7rem,0.7fr)] sm:p-5" method="get">
         <div>
-          <label className="label">From week</label>
-          <select name="from" className="input" defaultValue={from}>
+          <label className="label" htmlFor="cost-from">From week</label>
+          <select id="cost-from" name="from" className="input" defaultValue={from}>
             {weeks.map((w) => <option key={w} value={w}>{weekLabel(w)}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">To week</label>
-          <select name="to" className="input" defaultValue={to}>
+          <label className="label" htmlFor="cost-to">To week</label>
+          <select id="cost-to" name="to" className="input" defaultValue={to}>
             {weeks.map((w) => <option key={w} value={w}>{weekLabel(w)}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">Project</label>
-          <select name="project" className="input" defaultValue={sp.project ?? ""}>
+          <label className="label" htmlFor="cost-project">Project</label>
+          <select id="cost-project" name="project" className="input" defaultValue={sp.project ?? ""}>
             <option value="">All authorised</option>
             {r.projects.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
           </select>
         </div>
         <div className="flex items-end">
-          <button className="btn-primary w-full">Apply</button>
+          <button className="btn-secondary w-full border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Apply</button>
         </div>
       </form>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="cost-stats grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Approved labour hours" value={hours(totalSeconds)} />
         <Stat label="Approved labour value" value={fmtMoney(totalValue)} />
         <Stat label="Equipment" value="Not included" tone="muted" sub="Module not available yet" />
         <Stat label="Admin allocations · Materials" value="Not included" tone="muted" sub="Module not available yet" />
       </div>
 
-      <section className="card overflow-x-auto p-0 sm:p-0">
+      <section className="overflow-x-auto rounded-[18px] border border-[#ded5c9] bg-white">
         <h2 className="h2 px-4 pt-4">By project</h2>
         <table className="table mt-2">
           <thead>
@@ -92,13 +92,13 @@ export default async function CostsPage({ searchParams }: { searchParams: SP }) 
         </table>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="h2">By project, week and role</h2>
+      <section className="overflow-hidden rounded-[18px] border border-[#ded5c9] bg-white">
+        <h2 className="h2 px-4 pt-4">By project, week and role</h2>
         {r.byLine.length === 0 ? (
-          <Empty>No approved labour in this period.</Empty>
+          <div className="flex min-h-[90px] items-center justify-center p-6 text-center text-sm text-[#66545d]">No approved labour in this period.</div>
         ) : (
-          <div className="card overflow-x-auto p-0 sm:p-0">
-            <table className="table">
+          <div className="overflow-x-auto">
+            <table className="table mt-2">
               <thead>
                 <tr><th>Project</th><th>Week</th><th>Role</th><th className="num">Hours</th><th className="num">Value</th><th></th></tr>
               </thead>
@@ -110,7 +110,7 @@ export default async function CostsPage({ searchParams }: { searchParams: SP }) 
                     <td>{l.roleName}</td>
                     <td className="num"><Hours s={l.seconds} /></td>
                     <td className="num"><Money v={l.value} /></td>
-                    <td><a className="text-xs text-blue-700 hover:underline" href={`/costs?${qs({ drill: `${l.projectId}|${l.weekStart}` })}#drill`}>Entries</a></td>
+                    <td><a className="text-xs text-[#92621e] hover:underline focus-visible:outline-2 focus-visible:outline-[#92754e]" href={`/costs?${qs({ drill: `${l.projectId}|${l.weekStart}` })}#drill`}>Entries</a></td>
                   </tr>
                 ))}
               </tbody>
@@ -120,7 +120,7 @@ export default async function CostsPage({ searchParams }: { searchParams: SP }) 
       </section>
 
       {sp.drill && (
-        <section id="drill" className="card overflow-x-auto">
+        <section id="drill" className="overflow-x-auto rounded-[18px] border border-[#ded5c9] bg-white p-4 sm:p-5">
           <h2 className="h2 mb-2">Source entries · {drillRows[0]?.projectCode} · {drillWeek && weekLabel(drillWeek)}</h2>
           <table className="table">
             <thead>

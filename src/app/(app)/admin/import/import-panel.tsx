@@ -36,16 +36,16 @@ export function ImportPanel({ kind, title, help, template }: { kind: ImportKind;
   else if (report) summary = `All rows are valid: ${report.ok} to import${report.skipped ? `, ${report.skipped} skipped` : ""}. Nothing is saved until you press Import.`;
 
   return (
-    <section className="card space-y-3">
+    <section className="min-w-0 space-y-4 rounded-[18px] border border-[#ded5c9] bg-white p-4 sm:p-5">
       <div>
         <h2 className="h2">{title}</h2>
-        <div className="muted mt-1">{help}</div>
-        <a className="mt-1 inline-block text-sm text-brand-700 underline" href={template} download>
+        <div className="muted mt-2 text-[#66545d]">{help}</div>
+        <a className="mt-3 inline-block rounded-sm text-sm text-[#92621e] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e]" href={template} download>
           Download the template
         </a>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="btn-secondary cursor-pointer">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="btn-secondary cursor-pointer border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#92754e]">
           Choose CSV file
           <input
             type="file"
@@ -63,11 +63,11 @@ export function ImportPanel({ kind, title, help, template }: { kind: ImportKind;
             }}
           />
         </label>
-        {fileName && csv && <span className="text-sm">{fileName}</span>}
-        <button type="button" className="btn-secondary" disabled={!csv || pending} onClick={() => send(false)}>
+        {fileName && csv && <span className="min-w-0 break-all text-sm text-[#66545d]">{fileName}</span>}
+        <button type="button" className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]" disabled={!csv || pending} onClick={() => send(false)}>
           {pending && !checked ? "Checking…" : "Check file"}
         </button>
-        <button type="button" className="btn-primary" disabled={!canImport || pending} onClick={() => send(true)}>
+        <button type="button" className="btn-brand bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]" disabled={!canImport || pending} onClick={() => send(true)}>
           {pending && checked ? "Importing…" : canImport ? `Import ${plural(report.ok, "row")}` : "Import"}
         </button>
       </div>
@@ -82,9 +82,9 @@ export function ImportPanel({ kind, title, help, template }: { kind: ImportKind;
           <p role="status" className={`rounded-lg px-3 py-2 text-sm ${report.errors ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>
             {summary}
           </p>
-          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200">
+          <div className="max-h-96 overflow-auto rounded-xl border border-[#ded5c9]">
             <table className="table">
-              <thead>
+              <thead className="sticky top-0 bg-[#faf8f5]">
                 <tr>
                   <th className="num">Line</th>
                   <th>Row</th>

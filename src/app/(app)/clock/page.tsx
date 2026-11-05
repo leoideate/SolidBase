@@ -28,21 +28,21 @@ export default async function ClockPage() {
   const tot = totals(view.entries);
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div data-page="worker-clock" className="mx-auto max-w-lg space-y-5">
       <ClockPanel open={openInfo} projects={options.projects} roles={options.roles} t={t.clock} />
-      <Link href="/timesheets" className="card block hover:border-brand-400">
-        <div className="flex items-center justify-between">
+      <Link href="/timesheets" className="card block transition-colors hover:border-[#b58e59] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">This week</div>
-            <div className="text-sm text-slate-600">{weekLabel(week)}</div>
+            <div className="text-xs font-semibold tracking-wide text-[#66545d] uppercase">This week</div>
+            <div className="text-sm text-[#66545d]">{weekLabel(week)}</div>
           </div>
           <div className="text-right">
             <div className="text-xl font-bold tabular-nums">{hours(tot.seconds)} h</div>
-            <div className="text-xs text-slate-500">recorded · {fmtMoney(tot.value)} est. (unapproved)</div>
+            <div className="text-xs text-[#66545d]">recorded · {fmtMoney(tot.value)} est. (unapproved)</div>
           </div>
         </div>
       </Link>
-      <p className="px-1 text-xs text-slate-500">
+      <p className="px-1 text-xs text-[#66545d]">
         {t.clock.breakHint} {t.clock.changeHint}
       </p>
     </div>

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { requireActor } from "@/server/auth/session";
 import { companyLookups, timesheetById } from "@/server/services/views";
 import { AppError } from "@/server/errors";
-import { fmtDateTime, toLocalInput, weekDays, weekLabel } from "@/lib/time";
+import { fmtDateTime, localDate, toLocalInput, weekDays, weekLabel } from "@/lib/time";
+import { DateTimePicker } from "@/components/date-time-picker";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { BreakdownTable, EntriesList, HistoryPanel, WeekStats } from "@/components/timesheet-parts";
 import { PageHeader, StatusBadge } from "@/components/ui";
@@ -47,7 +48,7 @@ function AllocationFields({ lookups, projectId, jobRoleId }: { lookups: Lookups;
 
 function WorkFields({ breakMinutes = 0, note }: { breakMinutes?: number; note?: string | null }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-[8rem_1fr]">
+    <div className="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)]">
       <div>
         <label className="label">Unpaid break (min)</label>
         <input name="breakMinutes" type="number" min={0} max={600} step={1} className="input" defaultValue={breakMinutes} />
@@ -63,28 +64,28 @@ function WorkFields({ breakMinutes = 0, note }: { breakMinutes?: number; note?: 
 function EntryActions({ e, lookups }: { e: EntryRow; lookups: Lookups }) {
   return (
     <details className="group mt-1">
-      <summary className="cursor-pointer text-xs font-semibold text-blue-700 select-none">{e.status === "open" ? "Close / correct" : "Correct"}</summary>
-      <div className="mt-2 w-full min-w-72 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <summary className="review-summary cursor-pointer text-xs font-semibold text-[#92621e] select-none">{e.status === "open" ? "Close / correct" : "Correct"}</summary>
+      <div className="mt-2 w-full min-w-0 space-y-3 rounded-xl border border-[#ded5c9] bg-[#faf8f5] p-3">
         <ActionForm action={correctAction} className="space-y-2">
           <input type="hidden" name="entryId" value={e.id} />
           <AllocationFields lookups={lookups} projectId={e.projectId} jobRoleId={e.jobRoleId} />
           <div className="grid gap-2 sm:grid-cols-2">
             <div>
               <label className="label">Start (Dublin time)</label>
-              <input type="datetime-local" name="startAt" className="input" defaultValue={toLocalInput(e.startAt)} required />
+              <DateTimePicker id={`start-${e.id}`} name="startAt" defaultValue={toLocalInput(e.startAt)} today={localDate(new Date())} required />
             </div>
             <div>
               <label className="label">End (Dublin time)</label>
-              <input type="datetime-local" name="endAt" className="input" defaultValue={toLocalInput(e.endAt)} required={e.status === "closed"} />
+              <DateTimePicker id={`end-${e.id}`} name="endAt" defaultValue={toLocalInput(e.endAt)} today={localDate(new Date())} required={e.status === "closed"} />
             </div>
           </div>
           <WorkFields breakMinutes={e.breakMinutes} note={e.note} />
           <input name="reason" className="input" placeholder="Reason (required)" required />
-          <SubmitButton className="btn-primary btn-sm">Save correction</SubmitButton>
+          <SubmitButton className="btn-brand btn-sm bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Save correction</SubmitButton>
         </ActionForm>
-        <ActionForm action={voidAction} className="flex flex-wrap gap-2 border-t border-slate-200 pt-3" confirm="Remove this entry from the timesheet? It stays in the history.">
+        <ActionForm action={voidAction} className="flex flex-wrap gap-2 border-t border-[#ded5c9] pt-3" confirm="Remove this entry from the timesheet? It stays in the history.">
           <input type="hidden" name="entryId" value={e.id} />
-          <input name="reason" className="input flex-1" placeholder="Reason for removing (e.g. duplicate)" required />
+          <input name="reason" className="input min-w-0 flex-1" placeholder="Reason for removing (e.g. duplicate)" required />
           <SubmitButton className="btn-danger btn-sm">Remove entry</SubmitButton>
         </ActionForm>
       </div>
@@ -105,7 +106,7 @@ function StatusBanner({ data }: { data: Awaited<ReturnType<typeof timesheetById>
   }
   if (ts.status === "returned") return <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Returned to the worker. Waiting for them to respond and resubmit.</p>;
   if (ts.status === "submitted" && latest?.v.cause === "reopened") {
-    return <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900">Reopened as version {latest.v.versionNo}. It needs approval again before export. Reason: “{latest.v.causeReason}”</p>;
+    return <p role="status" className="rounded-xl border border-[#ded5c9] bg-[#f2ebdf] p-3 text-sm text-[#66545d]">Reopened as version {latest.v.versionNo}. It needs approval again before export. Reason: “{latest.v.causeReason}”</p>;
   }
   return null;
 }
@@ -127,7 +128,11 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
   const days = weekDays(ts.weekStart);
 
   return (
-    <div className="space-y-4">
+    <div data-page="team-review" className="space-y-5">
+      <div className="mb-5 flex items-center gap-3 text-xs font-semibold tracking-wide text-[#a4834e]">
+        <span aria-hidden="true" className="h-px w-10 bg-[#a4834e]" />
+        TEAM MANAGEMENT
+      </div>
       <PageHeader
         title={data.worker.name}
         subtitle={
@@ -135,7 +140,7 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
             {data.worker.workerCode} · {weekLabel(ts.weekStart)} <StatusBadge status={ts.status} /> <span className="text-xs">version {ts.currentVersion || "—"}</span>
           </span>
         }
-        actions={<Link href="/team" className="btn-secondary">Back to queue</Link>}
+        actions={<Link href="/team" className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Back to queue</Link>}
       />
       {!data.canManage && <p className="rounded-xl bg-slate-100 p-3 text-sm text-slate-700">Read-only support access.</p>}
       <StatusBanner data={data} />
@@ -148,23 +153,23 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
         <EntriesList entries={data.entries} longShiftHours={data.settings.longShiftHours} renderActions={editable ? (e) => <EntryActions e={e} lookups={lookups} /> : undefined} />
         {editable && (
           <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-blue-700">+ Add a missing entry</summary>
-            <ActionForm action={addEntryAction} className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3" resetOnSuccess>
+            <summary className="review-summary cursor-pointer text-sm font-semibold text-[#92621e]">Add a missing entry</summary>
+            <ActionForm action={addEntryAction} className="mt-3 space-y-2 rounded-xl border border-[#ded5c9] bg-[#faf8f5] p-3" resetOnSuccess>
               <input type="hidden" name="workerId" value={ts.workerId} />
               <AllocationFields lookups={lookups} />
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <label className="label">Start (Dublin time)</label>
-                  <input type="datetime-local" name="startAt" className="input" min={`${days[0]}T00:00`} max={`${days[6]}T23:59`} defaultValue={`${days[0]}T07:00`} required />
+                  <DateTimePicker id="missing-start" name="startAt" min={`${days[0]}T00:00`} max={`${days[6]}T23:59`} defaultValue={`${days[0]}T07:00`} today={localDate(new Date())} required />
                 </div>
                 <div>
                   <label className="label">End (Dublin time)</label>
-                  <input type="datetime-local" name="endAt" className="input" defaultValue={`${days[0]}T15:00`} required />
+                  <DateTimePicker id="missing-end" name="endAt" defaultValue={`${days[0]}T15:00`} today={localDate(new Date())} required />
                 </div>
               </div>
               <WorkFields />
               <input name="reason" className="input" placeholder="Reason (required), e.g. phone had no signal" required />
-              <SubmitButton className="btn-primary btn-sm">Add entry</SubmitButton>
+              <SubmitButton className="btn-brand btn-sm bg-[#b38323]! text-white hover:bg-[#9a701c]! focus-visible:outline-[#92754e]">Add entry</SubmitButton>
             </ActionForm>
           </details>
         )}
@@ -195,7 +200,7 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
               <input type="hidden" name="timesheetId" value={ts.id} />
               <input type="hidden" name="versionNo" value={ts.currentVersion} />
               <textarea name="comment" className="input min-h-20" placeholder="What does the worker need to clarify?" required />
-              <SubmitButton className="btn-secondary w-full">Return to worker</SubmitButton>
+              <SubmitButton className="btn-secondary w-full border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Return to worker</SubmitButton>
             </ActionForm>
           </div>
         </section>
@@ -205,10 +210,10 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
         <section className="card space-y-2">
           <h2 className="h2">Reopen approved timesheet</h2>
           <p className="muted">Creates a new version that must be approved again. A replacement export will show the new version number.</p>
-          <ActionForm action={reopenAction} className="flex flex-col gap-2 sm:flex-row" confirm="Reopen this approved timesheet?">
+          <ActionForm action={reopenAction} className="flex flex-col flex-wrap gap-2 sm:flex-row" confirm="Reopen this approved timesheet?">
             <input type="hidden" name="timesheetId" value={ts.id} />
-            <input name="reason" className="input flex-1" placeholder="Reason (required)" required />
-            <SubmitButton className="btn-secondary">Reopen</SubmitButton>
+            <input name="reason" className="input min-w-0 flex-1" placeholder="Reason (required)" required />
+            <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Reopen</SubmitButton>
           </ActionForm>
         </section>
       )}
@@ -216,10 +221,10 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
       {data.canManage && (ts.status === "draft" || ts.status === "returned") && data.weekEnded && ts.workerId !== actor.memberId && (
         <section className="card space-y-2">
           <h2 className="h2">Submit on worker&apos;s behalf</h2>
-          <ActionForm action={adminSubmitAction} className="flex flex-col gap-2 sm:flex-row">
+          <ActionForm action={adminSubmitAction} className="flex flex-col flex-wrap gap-2 sm:flex-row">
             <input type="hidden" name="timesheetId" value={ts.id} />
-            <input name="reason" className="input flex-1" placeholder="Reason (required)" defaultValue={data.worker.hasPin ? "" : "Hours recorded by supervisor"} required />
-            <SubmitButton className="btn-secondary">Submit</SubmitButton>
+            <input name="reason" className="input min-w-0 flex-1" placeholder="Reason (required)" defaultValue={data.worker.hasPin ? "" : "Hours recorded by supervisor"} required />
+            <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Submit</SubmitButton>
           </ActionForm>
         </section>
       )}
