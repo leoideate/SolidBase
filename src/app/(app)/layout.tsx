@@ -8,9 +8,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const actor = await requireActor();
   const t = dict("en");
   const links: { href: string; label: string }[] = [];
+  if (actor.isAdmin) links.push({ href: "/admin", label: t.nav.admin });
   if (actor.isWorker) links.push({ href: "/clock", label: t.nav.clock }, { href: "/timesheets", label: t.nav.myWeek }, { href: "/history", label: t.nav.history });
   if (actor.isManager || actor.isAdmin) links.push({ href: "/team", label: t.nav.team }, { href: "/team/hours", label: t.nav.crewHours }, { href: "/team/crew", label: t.nav.crew }, { href: "/team/overview", label: t.nav.overview });
-  if (actor.isAdmin) links.push({ href: "/admin", label: t.nav.admin });
   if (await hasCostAccess(actor)) links.push({ href: "/costs", label: t.nav.costs });
   if (actor.isIt) links.push({ href: "/system", label: t.nav.system });
 
