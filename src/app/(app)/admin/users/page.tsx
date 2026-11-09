@@ -5,12 +5,24 @@ import { ActionForm, SubmitButton } from "@/components/action-form";
 import { createUserAction } from "../actions";
 import { RoleCheckboxes } from "@/components/role-checkboxes";
 import { PersonFields } from "@/components/person-fields";
+import { UserRoleFilter } from "@/components/user-role-filter";
 
 export const dynamic = "force-dynamic";
 
-export default async function UsersPage() {
+const ROLE_FILTERS = {
+  worker: { label: "Worker", field: "isWorker" },
+  manager: { label: "Manager", field: "isManager" },
+  admin: { label: "Admin", field: "isAdmin" },
+  it: { label: "IT", field: "isIt" },
+} as const;
+
+type RoleFilter = keyof typeof ROLE_FILTERS;
+
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ role?: string | string[] }> }) {
   const actor = await requireActor();
-  const members = await listMembers(actor);
+  const [allMembers, params] = await Promise.all([listMembers(actor), searchParams]);
+  const role = typeof params.role === "string" && Object.hasOwn(ROLE_FILTERS, params.role) ? params.role as RoleFilter : "";
+  const members = role ? allMembers.filter(({ m }) => m[ROLE_FILTERS[role].field]) : allMembers;
   return (
     <div data-page="admin-users" className="space-y-5">
       <div className="pb-1">
@@ -21,6 +33,7 @@ export default async function UsersPage() {
         <h1 className="h1">Users</h1>
         <p className="muted mt-1 text-[#66545d]">Deactivating keeps all history. CostMaster is granted per user on the user page.</p>
       </div>
+      <UserRoleFilter role={role} options={Object.entries(ROLE_FILTERS).map(([value, { label }]) => ({ value, label }))} />
       <div className="overflow-x-auto rounded-[18px] border border-[#ded5c9] bg-white">
         <table className="table">
           <thead>
@@ -33,6 +46,9 @@ export default async function UsersPage() {
             </tr>
           </thead>
           <tbody>
+            {members.length === 0 && (
+              <tr><td colSpan={5} className="py-6 text-center text-[#66545d]">No users match this role.</td></tr>
+            )}
             {members.map(({ m, u }) => (
               <tr key={m.id} className={m.isActive ? "" : "opacity-50"}>
                 <td>

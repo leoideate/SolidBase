@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminHome() {
   const actor = await requireActor();
   const c = await adminCounts(actor);
+  const statLinkClass = "block rounded-[18px] hover:[&>.card]:border-[#c38e30] hover:[&>.card]:bg-[#fcf8f2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#92754e] [&>.card]:h-full [&>.card]:transition-colors";
   return (
     <div data-page="admin-home" className="space-y-5">
       <div className="pb-1">
@@ -19,11 +20,21 @@ export default async function AdminHome() {
         <p className="muted mt-1 text-[#66545d]">Business setup, permissions and history</p>
       </div>
       <div className="admin-stats grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Stat label="Active workers" value={String(c.workers)} />
-        <Stat label="Managers" value={String(c.managers)} />
-        <Stat label="Active projects" value={String(c.projects)} />
-        <Stat label="Awaiting approval" value={String(c.submitted)} />
-        <Stat label="Rate problems" value={String(c.problems)} tone={c.problems ? "default" : "muted"} sub={c.problems ? "Blocking approval" : "None"} />
+        <Link href="/team/crew" className={statLinkClass}>
+          <Stat label="Active workers" value={String(c.workers)} />
+        </Link>
+        <Link href="/admin/users?role=manager" className={statLinkClass}>
+          <Stat label="Managers" value={String(c.managers)} />
+        </Link>
+        <Link href="/admin/projects" className={statLinkClass}>
+          <Stat label="Active projects" value={String(c.projects)} />
+        </Link>
+        <Link href="/team" className={statLinkClass}>
+          <Stat label="Awaiting approval" value={String(c.submitted)} />
+        </Link>
+        <Link href="/admin/rates" className={statLinkClass}>
+          <Stat label="Rate problems" value={String(c.problems)} tone={c.problems ? "default" : "muted"} sub={c.problems ? "Blocking approval" : "None"} />
+        </Link>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {[
