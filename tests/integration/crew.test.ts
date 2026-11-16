@@ -43,7 +43,7 @@ describe("supervisor crew", () => {
     await expect(addJoe()).rejects.toThrow(/already in use/);
   });
 
-  it("supervisor enters crew hours, submits on behalf and approves", async () => {
+  it("supervisor enters and submits crew hours; an independent admin approves", async () => {
     const joe = await addJoe();
     const week = addWeekToDate(s.lastWeek, 0);
     const n = await enterCrewHours(m().sean, {
@@ -83,7 +83,8 @@ describe("supervisor crew", () => {
     const ts = await timesheetFor(joe.id, s.lastWeek);
     await expect(submitOnBehalf(m().niamh, ts.id, "x")).rejects.toThrow();
     const v = await submitOnBehalf(m().sean, ts.id, "Hours recorded by supervisor");
-    const r = await approveTimesheet(m().sean, ts.id, v);
+    await expect(approveTimesheet(m().sean, ts.id, v)).rejects.toThrow(/Another authorised reviewer/);
+    const r = await approveTimesheet(m().admin, ts.id, v);
     expect(r.approved).toBe(true);
   });
 });
@@ -120,15 +121,36 @@ describe("bulk assignment", () => {
 });
 
 describe("rate entered with crew hours", () => {
-  it("supervisor sets a worker's rate while entering hours; the entry is priced with it", async () => {
+  it("rejects manager-supplied rates without saving rates or any hours in the batch", async () => {
+    const joe = await addJoe();
+    const ratesBefore = await db.select().from(schema.rates);
+    await expect(enterCrewHours(m().sean, {
+      date: s.lastWeek,
+      projectId: s.projects.P001.id,
+      rows: [
+        { workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "07:00", end: "08:00" },
+        { workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "08:00", end: "15:00", rate: "40.00" },
+      ],
+    })).rejects.toThrow(/Administrator access required/);
+    expect(await db.select().from(schema.rates)).toEqual(ratesBefore);
+    expect(await db.select().from(schema.workEntries).where(eq(schema.workEntries.workerId, joe.id))).toHaveLength(0);
+  });
+
+  it("admin sets a rate and managers enter hours using it without changing rates", async () => {
     const joe = await addJoe();
     const date = addWeekToDate(s.lastWeek, 0);
-    await enterCrewHours(m().sean, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "07:00", end: "15:00", rate: "40.00" }] });
+    await enterCrewHours(m().admin, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "07:00", end: "15:00", rate: "40.00" }] });
     const [e] = await db.select().from(schema.workEntries).where(eq(schema.workEntries.workerId, joe.id));
     expect(Number(e.appliedRate)).toBe(40);
     expect(Number(e.value)).toBe(320);
-    // A different rate for the same role and day needs admin; so does a worker outside the crew.
-    await expect(enterCrewHours(m().sean, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "16:00", end: "17:00", rate: "45" }] })).rejects.toThrow(/Ask admin/);
+    const ratesBefore = await db.select().from(schema.rates);
+    await enterCrewHours(m().sean, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "16:00", end: "17:00", rate: "" }] });
+    const entries = await db.select().from(schema.workEntries).where(eq(schema.workEntries.workerId, joe.id));
+    expect(entries).toHaveLength(2);
+    expect(entries.every((entry) => Number(entry.appliedRate) === 40)).toBe(true);
+    expect(entries.reduce((total, entry) => total + Number(entry.value), 0)).toBe(360);
+    expect(await db.select().from(schema.rates)).toEqual(ratesBefore);
+    await expect(enterCrewHours(m().sean, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "17:00", end: "18:00", rate: "45" }] })).rejects.toThrow(/Administrator access required/);
     await expect(enterCrewHours(m().niamh, { date, projectId: s.projects.P001.id, rows: [{ workerId: joe.id, jobRoleId: s.roles.DUMP.id, start: "16:00", end: "17:00", rate: "45" }] })).rejects.toThrow();
   });
 });

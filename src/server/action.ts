@@ -6,7 +6,7 @@ import { requireActor } from "./auth/session";
 import { AppError } from "./errors";
 import { logError } from "./services/audit";
 
-export type ActionState = { ok?: string; error?: string; at?: number };
+export type ActionState = { ok?: string; error?: string; fieldErrors?: Record<string, string>; at?: number };
 
 /**
  * Wraps a server action: authenticates, converts expected AppErrors into a displayable message,
@@ -22,7 +22,9 @@ export async function runAction(
     if (opts.revalidate) revalidatePath(opts.revalidate, "layout");
     return { ok, at: Date.now() };
   } catch (e) {
-    if (e instanceof AppError) return { error: e.message, at: Date.now() };
+    if (e instanceof AppError) return e.field
+      ? { fieldErrors: { [e.field]: e.message }, at: Date.now() }
+      : { error: e.message, at: Date.now() };
     await logError(db, (e as Error)?.message ?? "Unknown error", { stack: (e as Error)?.stack?.slice(0, 2000) });
     return { error: "Something went wrong and nothing was saved. Please try again.", at: Date.now() };
   }

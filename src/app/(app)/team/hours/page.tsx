@@ -76,7 +76,11 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
           <input type="hidden" name="date" value={date} />
           <input type="hidden" name="projectId" value={projectId} />
           <p className="muted">
-            {fmtDate(date)}. Tick each worker who worked, then check their role, start, end (5-minute steps), unpaid break and what work was done. Type a rate only to set or change that worker's hourly rate for the role from this day; leave it blank to keep the current rate. An end time earlier than the start counts as the next morning.
+            {fmtDate(date)}. Tick each worker who worked, then check their role, start, end (5-minute steps), unpaid break and what work was done.{" "}
+            {actor.isAdmin
+              ? "Type a rate only to set or change that worker's hourly rate for the role from this day; leave it blank to keep the current rate."
+              : "Pay rates are managed by Admin."}{" "}
+            An end time earlier than the start counts as the next morning.
           </p>
           <TickAll />
           <ul className="divide-y divide-slate-200">
@@ -85,7 +89,7 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
               const done = entries.filter((e) => e.workerId === w.id);
               const sheet = sheets.find((s) => s.workerId === w.id);
               return (
-                <li key={w.id} className="grid gap-2 py-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_9rem_9rem_7.5rem_6rem_minmax(0,1.5fr)] xl:items-center">
+                <li key={w.id} className={`grid gap-2 py-3 sm:grid-cols-2 xl:items-center ${actor.isAdmin ? "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_9rem_9rem_7.5rem_6rem_minmax(0,1.5fr)]" : "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_9rem_9rem_7.5rem_minmax(0,1.5fr)]"}`}>
                   <input type="hidden" name="workerId" value={w.id} />
                   <label className="flex items-start gap-2">
                     <input type="checkbox" name={`on_${w.id}`} className="mt-1 size-5 shrink-0" aria-label={`${w.name} worked`} disabled={sheet?.status === "approved"} />
@@ -119,7 +123,9 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
                       <option key={n} value={n}>{n ? `${n} min break` : "No break"}</option>
                     ))}
                   </select>
-                  <input name={`rate_${w.id}`} inputMode="decimal" className="input" placeholder="Rate €/h" aria-label={`${w.name} hourly rate (optional)`} title="Optional. Sets this worker's hourly rate for the chosen role from this day." autoComplete="off" />
+                  {actor.isAdmin && (
+                    <input name={`rate_${w.id}`} inputMode="decimal" className="input" placeholder="Rate €/h" aria-label={`${w.name} hourly rate (optional)`} title="Optional. Sets this worker's hourly rate for the chosen role from this day." autoComplete="off" />
+                  )}
                   <input name={`note_${w.id}`} className="input" placeholder="Work done" aria-label={`${w.name} work done`} />
                 </li>
               );
@@ -130,7 +136,7 @@ export default async function CrewHoursPage({ searchParams }: { searchParams: Pr
       )}
 
       <p className="muted text-[#66545d]">
-        Once the week has ended, open each worker&apos;s timesheet from the <Link href="/team" className="font-semibold text-[#a4834e] underline underline-offset-2">team queue</Link>, submit it on their behalf, then approve it.
+        Once the week has ended, open each worker&apos;s timesheet from the <Link href="/team" className="font-semibold text-[#a4834e] underline underline-offset-2">team queue</Link> and submit it on their behalf. Another authorised reviewer must approve hours you entered or submitted.
       </p>
     </div>
   );

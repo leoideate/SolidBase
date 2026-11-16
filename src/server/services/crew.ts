@@ -4,7 +4,7 @@ import type { Tx } from "../db";
 import { isMoney } from "@/lib/money";
 import { repriceUnapproved } from "./rates";
 import type { Actor } from "../actor";
-import { assertCanManageWorker, managedWorkerIds } from "../authz";
+import { assertCanManageWorker, managedWorkerIds, requireAdmin } from "../authz";
 import { AppError, Forbidden, pgCode } from "../errors";
 import { parseLocalDateTime, weekStartOf } from "@/lib/time";
 import { audit } from "./audit";
@@ -118,6 +118,7 @@ export const CREW_HOURS_REASON = "Hours entered by supervisor";
  */
 export async function enterCrewHours(actor: Actor, input: { date: string; projectId: string; rows: CrewHoursRow[] }) {
   requireSupervisor(actor);
+  if (input.rows.some((r) => r.rate)) requireAdmin(actor);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new AppError("Choose a valid date.");
   if (!input.projectId) throw new AppError("Choose a project.");
   if (input.rows.length === 0) throw new AppError("Tick at least one worker.");
@@ -143,10 +144,11 @@ export async function enterCrewHours(actor: Actor, input: { date: string; projec
 }
 
 /**
- * A supervisor sets the hourly rate of a crew member for a role, effective from the day they enter
- * hours for. Creates a worker-level rate; a different rate already starting that day needs admin.
+ * An admin sets the hourly rate of a crew member for a role, effective from the day they enter
+ * hours for. Creates a worker-level rate; existing rates are changed through rate administration.
  */
 async function setWorkerRate(tx: Tx, actor: Actor, workerId: string, jobRoleId: string, hourlyRate: string, from: string) {
+  requireAdmin(actor);
   await assertCanManageWorker(tx, actor, workerId);
   const [same] = await tx
     .select()

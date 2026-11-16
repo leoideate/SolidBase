@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, startTransition, useActionState, useContext, useEffect, useRef } from "react";
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-export type ActionState = { ok?: string; error?: string; at?: number };
+export type ActionState = { ok?: string; error?: string; fieldErrors?: Record<string, string>; at?: number };
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
 const ActionPending = createContext(false);
@@ -18,36 +18,74 @@ export function ActionForm({
   className,
   resetOnSuccess,
   confirm,
+  inlineErrors = false,
 }: {
   action: Action;
   children: React.ReactNode;
   className?: string;
   resetOnSuccess?: boolean;
   confirm?: string;
+  inlineErrors?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const [dismissedState, setDismissedState] = useState<ActionState | null>(null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.ok && resetOnSuccess) ref.current?.reset();
   }, [state, resetOnSuccess]);
+  useEffect(() => {
+    if (!inlineErrors) return;
+    const form = ref.current;
+    if (!form) return;
+    const controls = Array.from(form.elements).filter(
+      (element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+        element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement,
+    );
+    for (const control of controls) control.setCustomValidity("");
+    if (!pending) {
+      for (const [name, message] of Object.entries(state.fieldErrors ?? {})) {
+        const control = controls.find((element) => element.name === name);
+        control?.setCustomValidity(message);
+      }
+      if (state.fieldErrors) form.reportValidity();
+    }
+    // Date/time widgets update a backing input through React, so listen on the
+    // whole form and clear stale server validation whenever the user edits it.
+    const clear = () => {
+      for (const control of controls) control.setCustomValidity("");
+    };
+    form.addEventListener("input", clear);
+    form.addEventListener("change", clear);
+    return () => {
+      clear();
+      form.removeEventListener("input", clear);
+      form.removeEventListener("change", clear);
+    };
+  }, [state, pending, inlineErrors]);
   return (
     <ActionPending.Provider value={pending}>
     <form
       ref={ref}
       action={formAction}
       className={className}
+      onInvalidCapture={() => setDismissedState(state)}
+      onChangeCapture={() => setDismissedState(state)}
+      onInputCapture={(event) => {
+        if (event.nativeEvent.isTrusted) setDismissedState(state);
+      }}
       onSubmit={(event) => {
         // Dispatch explicitly: React's automatic action reset also clears inputs
         // when the server returns a validation error instead of throwing.
         event.preventDefault();
         if (confirm && !window.confirm(confirm)) return;
+        setDismissedState(state);
         const submitter = (event.nativeEvent as SubmitEvent).submitter;
         const data = new FormData(event.currentTarget, submitter);
         startTransition(() => formAction(data));
       }}
     >
       {children}
-      <FormMessage state={state} />
+      {!pending && dismissedState !== state && <FormMessage state={!inlineErrors && state.fieldErrors ? { ...state, error: Object.values(state.fieldErrors).join(" ") } : state} />}
     </form>
     </ActionPending.Provider>
   );
@@ -69,12 +107,12 @@ export function FormMessage({ state }: { state: ActionState }) {
   return null;
 }
 
-export function SubmitButton({ children, className = "btn-primary", name, value }: { children: React.ReactNode; className?: string; name?: string; value?: string }) {
+export function SubmitButton({ children, className = "btn-primary", name, value, disabled = false }: { children: React.ReactNode; className?: string; name?: string; value?: string; disabled?: boolean }) {
   const { pending: formPending } = useFormStatus();
   const actionPending = useContext(ActionPending);
   const pending = formPending || actionPending;
   return (
-    <button type="submit" className={className} disabled={pending} name={name} value={value}>
+    <button type="submit" className={className} disabled={pending || disabled} name={name} value={value}>
       {pending ? "Saving…" : children}
     </button>
   );

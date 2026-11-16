@@ -1,10 +1,11 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "../db";
 import type { DbOrTx, Tx } from "../db";
 import type { Actor } from "../actor";
 import { assertCanManageWorker } from "../authz";
 import { AppError, Forbidden, NotFound } from "../errors";
 import { sumMoney } from "@/lib/money";
+import { isValidSubmissionReason } from "@/lib/reason";
 import { localDate, weekEndInstant } from "@/lib/time";
 import { audit } from "./audit";
 import { priceEntry } from "./rates";
@@ -169,7 +170,9 @@ export async function submitTimesheet(actor: Actor, timesheetId: string, comment
  * is unavailable or has no app login because the supervisor records their hours. Not for self.
  */
 export async function submitOnBehalf(actor: Actor, timesheetId: string, reason: string) {
-  if (!reason.trim()) throw new AppError("A reason is required.");
+  if (!isValidSubmissionReason(reason)) {
+    throw new AppError("Explain why you are submitting on the worker's behalf (at least 10 characters). Use words, not just numbers, symbols or a repeated character.");
+  }
   return db.transaction(async (tx) => {
     const ts = await lockTimesheet(tx, timesheetId, actor.companyId);
     if (ts.workerId === actor.memberId) throw new AppError("Submit your own timesheet from your worker view.");
@@ -211,6 +214,28 @@ export async function approvalBlockers(tx: DbOrTx, actor: Actor, ts: Timesheet):
   const [worker] = await tx.select().from(schema.companyMembers).where(eq(schema.companyMembers.id, ts.workerId));
   if (ts.workerId === actor.memberId || worker?.userId === actor.userId) {
     out.push({ code: "self", message: "You cannot approve your own hours. Another authorised reviewer must approve them." });
+  }
+  // Check submission history, not just the latest version: corrections, reopening or
+  // repricing must not erase who submitted the timesheet. Match identity across memberships.
+  const [submission] = await tx
+    .select({ id: schema.timesheetVersions.id })
+    .from(schema.timesheetVersions)
+    .innerJoin(schema.companyMembers, eq(schema.companyMembers.id, schema.timesheetVersions.createdBy))
+    .where(and(
+      eq(schema.timesheetVersions.timesheetId, ts.id),
+      inArray(schema.timesheetVersions.cause, ["submitted", "resubmitted", "admin_submitted"]),
+      eq(schema.companyMembers.userId, actor.userId),
+    ))
+    .limit(1);
+  const [revision] = await tx
+    .select({ id: schema.entryRevisions.id })
+    .from(schema.entryRevisions)
+    .innerJoin(schema.workEntries, eq(schema.workEntries.id, schema.entryRevisions.entryId))
+    .innerJoin(schema.companyMembers, eq(schema.companyMembers.id, schema.entryRevisions.editedBy))
+    .where(and(eq(schema.workEntries.timesheetId, ts.id), eq(schema.companyMembers.userId, actor.userId)))
+    .limit(1);
+  if (submission || revision) {
+    out.push({ code: "participant", message: "You entered, corrected or submitted this timesheet. Another authorised reviewer must approve it." });
   }
   if (ts.status !== "submitted") out.push({ code: "status", message: `Timesheet is ${ts.status}, not submitted.` });
   const entries = await tx

@@ -132,8 +132,9 @@ describe("hours import", () => {
     expect(entries.find((e) => e.note === "Groundworks")?.value).toBe("224.00"); // 8h × €28
 
     const ts = await timesheetFor(joe.id, s.lastWeek);
+    await db.insert(schema.managerAssignments).values({ companyId: s.company.id, managerId: m().niamh.memberId, workerId: joe.id });
     const v = await submitOnBehalf(m().sean, ts.id, "Imported hours");
-    expect((await approveTimesheet(m().sean, ts.id, v)).approved).toBe(true);
+    expect((await approveTimesheet(m().niamh, ts.id, v)).approved).toBe(true);
   });
 
   it("catches unknown workers, bad times, overlaps, future shifts and approved weeks before saving", async () => {
@@ -164,7 +165,8 @@ describe("hours import", () => {
     // An approved week is refused.
     await importHours(m().admin, `worker_id,date,project_id,job_role,start,end\nW010,${d[0]},P001,DUMP,07:00,12:00`, true);
     const ts = await timesheetFor(joe.id, s.lastWeek);
-    await approveTimesheet(m().sean, ts.id, await submitOnBehalf(m().sean, ts.id, "x"));
+    await db.insert(schema.managerAssignments).values({ companyId: s.company.id, managerId: m().niamh.memberId, workerId: joe.id });
+    await approveTimesheet(m().niamh, ts.id, await submitOnBehalf(m().sean, ts.id, "Worker confirmed the imported hours"));
     const again = await importHours(m().admin, `worker_id,date,project_id,job_role,start,end\nW010,${d[4]},P001,DUMP,07:00,12:00`, false);
     expect(again.rows[0].message).toMatch(/approved/);
   });

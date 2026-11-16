@@ -94,6 +94,8 @@ test("T04 correction with reason, return and resubmit", async ({ page }) => {
   await form.getByRole("button", { name: "Save correction" }).click();
   await expect(page.getByText(/Correction saved|Entry corrected/).first()).toBeVisible();
   await expect(page.getByText("Worker was on the school site").first()).toBeVisible();
+  await expect(page.getByText("You entered, corrected or submitted this timesheet. Another authorised reviewer must approve it.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await page.getByPlaceholder("What does the worker need to clarify?").fill("Please confirm Monday was P003");
   await page.getByRole("button", { name: "Return to worker" }).click();
   await expect(page.getByText(/Returned to the worker/).first()).toBeVisible();

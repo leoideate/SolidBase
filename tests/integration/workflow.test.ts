@@ -139,14 +139,15 @@ describe("T04 correction and return", () => {
     const after = await timesheetFor(m().pat.memberId, s.lastWeek);
     expect(after.currentVersion).toBe(ts.currentVersion + 1);
     // Approving the stale version is refused.
-    await expect(approveTimesheet(m().sean, ts.id, ts.currentVersion)).rejects.toThrow(/latest version/);
+    await expect(approveTimesheet(m().admin, ts.id, ts.currentVersion)).rejects.toThrow(/latest version/);
 
     await returnTimesheet(m().sean, ts.id, after.currentVersion, "Please confirm Monday");
     expect((await timesheetFor(m().pat.memberId, s.lastWeek)).status).toBe("returned");
     await submitTimesheet(m().pat, ts.id, "Confirmed, Monday was P003");
     const re = await timesheetFor(m().pat.memberId, s.lastWeek);
     expect(re.status).toBe("submitted");
-    expect((await approveTimesheet(m().sean, ts.id, re.currentVersion)).approved).toBe(true);
+    await expect(approveTimesheet(m().sean, ts.id, re.currentVersion)).rejects.toThrow(/entered, corrected or submitted/);
+    expect((await approveTimesheet(m().admin, ts.id, re.currentVersion)).approved).toBe(true);
   });
 
   it("rejects overlaps and end-before-start", async () => {
