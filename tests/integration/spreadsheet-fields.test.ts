@@ -86,7 +86,7 @@ describe("client spreadsheet fields", () => {
 
     const ts = await timesheetFor(m().pat.memberId, s.lastWeek);
     const v = await submitOnBehalf(m().sean, ts.id, "Hours recorded by supervisor");
-    expect((await approveTimesheet(m().sean, ts.id, v)).approved).toBe(true);
+    expect((await approveTimesheet(m().admin, ts.id, v)).approved).toBe(true);
     const csv = (await buildExport(m().admin, { scope: "team", fromWeek: s.lastWeek, toWeek: s.lastWeek })).csv;
     expect(csv).toContain("Unpaid break minutes");
     expect(csv).toContain(",60,7.50,27000,28.00,Hourly,EUR,210.00,");
@@ -108,6 +108,6 @@ describe("client spreadsheet fields", () => {
     await addEntry(m().sean, m().mary.memberId, { projectId: s.projects.P002.id, jobRoleId: s.roles.DIG.id, startAt: dublin(day, 13), endAt: dublin(day, 16) }, "Paper sheet");
     const ts = await timesheetFor(m().mary.memberId, s.lastWeek);
     const v = await submitOnBehalf(m().sean, ts.id, "Hours recorded by supervisor");
-    await expect(approveTimesheet(m().sean, ts.id, v)).rejects.toThrow(/same day/);
+    await expect(approveTimesheet(m().admin, ts.id, v)).rejects.toThrow(/same day/);
   });
 });

@@ -3,6 +3,7 @@ export class AppError extends Error {
   constructor(
     message: string,
     public code: string = "bad_request",
+    public field?: string,
   ) {
     super(message);
   }

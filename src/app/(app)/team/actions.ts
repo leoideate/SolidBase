@@ -14,7 +14,7 @@ import { parseLocalDateTime } from "@/lib/time";
 function minutes(fd: FormData, key: string) {
   const raw = str(fd, key).trim();
   if (!raw) return 0;
-  if (!/^\d{1,3}$/.test(raw)) throw new AppError("Break minutes must be a whole number.");
+  if (!/^\d{1,3}$/.test(raw)) throw new AppError("Break minutes must be a whole number.", "bad_request", "breakMinutes");
   return Number(raw);
 }
 
@@ -22,9 +22,9 @@ function times(fd: FormData, requireEnd: boolean) {
   const startAt = parseLocalDateTime(str(fd, "startAt"));
   const endRaw = str(fd, "endAt");
   const endAt = endRaw ? parseLocalDateTime(endRaw) : null;
-  if (!startAt) throw new AppError("Enter a valid start date and time.");
-  if (endRaw && !endAt) throw new AppError("Enter a valid end date and time.");
-  if (requireEnd && !endAt) throw new AppError("Enter an end date and time.");
+  if (!startAt) throw new AppError("Enter a valid start date and time.", "bad_request", "startAt");
+  if (endRaw && !endAt) throw new AppError("Enter a valid end date and time.", "bad_request", "endAt");
+  if (requireEnd && !endAt) throw new AppError("Enter an end date and time.", "bad_request", "endAt");
   return { startAt, endAt };
 }
 
@@ -86,7 +86,7 @@ export async function reopenAction(_: ActionState, fd: FormData): Promise<Action
 export async function adminSubmitAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
     const v = await submitOnBehalf(actor, str(fd, "timesheetId"), str(fd, "reason"));
-    return `Submitted on the worker's behalf (version ${v}). You can now approve it.`;
+    return `Submitted on the worker's behalf (version ${v}). Another authorised reviewer must approve it.`;
   }, { revalidate: "/team" });
 }
 

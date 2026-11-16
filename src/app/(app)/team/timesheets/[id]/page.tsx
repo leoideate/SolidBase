@@ -66,7 +66,7 @@ function EntryActions({ e, lookups }: { e: EntryRow; lookups: Lookups }) {
     <details className="group mt-1">
       <summary className="review-summary cursor-pointer text-xs font-semibold text-[#92621e] select-none">{e.status === "open" ? "Close / correct" : "Correct"}</summary>
       <div className="mt-2 w-full min-w-0 space-y-3 rounded-xl border border-[#ded5c9] bg-[#faf8f5] p-3">
-        <ActionForm action={correctAction} className="space-y-2">
+        <ActionForm action={correctAction} className="space-y-2" inlineErrors>
           <input type="hidden" name="entryId" value={e.id} />
           <AllocationFields lookups={lookups} projectId={e.projectId} jobRoleId={e.jobRoleId} />
           <div className="grid gap-2 sm:grid-cols-2">
@@ -154,7 +154,7 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
         {editable && (
           <details className="mt-4">
             <summary className="review-summary cursor-pointer text-sm font-semibold text-[#92621e]">Add a missing entry</summary>
-            <ActionForm action={addEntryAction} className="mt-3 space-y-2 rounded-xl border border-[#ded5c9] bg-[#faf8f5] p-3" resetOnSuccess>
+            <ActionForm action={addEntryAction} className="mt-3 space-y-2 rounded-xl border border-[#ded5c9] bg-[#faf8f5] p-3" resetOnSuccess inlineErrors>
               <input type="hidden" name="workerId" value={ts.workerId} />
               <AllocationFields lookups={lookups} />
               <div className="grid gap-2 sm:grid-cols-2">
@@ -177,7 +177,7 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
 
       {data.canManage && ts.status === "submitted" && (
         <section className="grid gap-4 md:grid-cols-2">
-          <div className="card space-y-3">
+          <div className="card flex flex-col gap-3">
             <h2 className="h2">Approve version {ts.currentVersion}</h2>
             {data.blockers.length > 0 ? (
               <ul className="space-y-1 text-sm text-red-800">
@@ -188,15 +188,15 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
             ) : (
               <p className="muted">Check hours, projects, roles and rates. Approval locks this version.</p>
             )}
-            <ActionForm action={approveAction} confirm={`Approve version ${ts.currentVersion} for ${data.worker.name}?`}>
+            <ActionForm action={approveAction} className="mt-auto" confirm={`Approve version ${ts.currentVersion} for ${data.worker.name}?`}>
               <input type="hidden" name="timesheetId" value={ts.id} />
               <input type="hidden" name="versionNo" value={ts.currentVersion} />
-              <SubmitButton className="btn w-full bg-emerald-600 text-white hover:bg-emerald-700">Approve</SubmitButton>
+              <SubmitButton disabled={data.blockers.length > 0} className="btn w-full bg-emerald-600 text-white hover:bg-emerald-700">Approve</SubmitButton>
             </ActionForm>
           </div>
-          <div className="card space-y-3">
+          <div className="card flex flex-col gap-3">
             <h2 className="h2">Return for clarification</h2>
-            <ActionForm action={returnAction} className="space-y-2">
+            <ActionForm action={returnAction} className="mt-auto space-y-2">
               <input type="hidden" name="timesheetId" value={ts.id} />
               <input type="hidden" name="versionNo" value={ts.currentVersion} />
               <textarea name="comment" className="input min-h-20" placeholder="What does the worker need to clarify?" required />
@@ -221,9 +221,10 @@ export default async function ReviewTimesheetPage({ params }: { params: Promise<
       {data.canManage && (ts.status === "draft" || ts.status === "returned") && data.weekEnded && ts.workerId !== actor.memberId && (
         <section className="card space-y-2">
           <h2 className="h2">Submit on worker&apos;s behalf</h2>
+          <p id="submission-reason-help" className="muted">Explain why you need to submit for this worker (at least 10 characters). For example: Worker cannot log in; I confirmed this week&apos;s hours with them.</p>
           <ActionForm action={adminSubmitAction} className="flex flex-col flex-wrap gap-2 sm:flex-row">
             <input type="hidden" name="timesheetId" value={ts.id} />
-            <input name="reason" className="input min-w-0 flex-1" placeholder="Reason (required)" defaultValue={data.worker.hasPin ? "" : "Hours recorded by supervisor"} required />
+            <input name="reason" className="input min-w-0 flex-1" aria-label="Reason for submitting on worker's behalf" aria-describedby="submission-reason-help" placeholder="Explain why you are submitting for this worker" minLength={10} required />
             <SubmitButton className="btn-secondary border-[#b88340] bg-[#fcf5e9]! hover:bg-[#f2e6d3]! focus-visible:outline-[#92754e]">Submit</SubmitButton>
           </ActionForm>
         </section>

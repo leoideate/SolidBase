@@ -41,26 +41,26 @@ async function validateAllocation(tx: Tx, actor: Actor, projectId: string, jobRo
     .select({ id: schema.projects.id })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, projectId), eq(schema.projects.companyId, actor.companyId)));
-  if (!p) throw new AppError("Unknown project.");
+  if (!p) throw new AppError("Unknown project.", "bad_request", "projectId");
   const [r] = await tx
     .select({ id: schema.jobRoles.id })
     .from(schema.jobRoles)
     .where(and(eq(schema.jobRoles.id, jobRoleId), eq(schema.jobRoles.companyId, actor.companyId)));
-  if (!r) throw new AppError("Unknown role.");
+  if (!r) throw new AppError("Unknown role.", "bad_request", "jobRoleId");
 }
 
 function validateTimes(startAt: Date, endAt: Date | null, breakMinutes = 0) {
   const now = new Date();
-  if (!Number.isInteger(breakMinutes) || breakMinutes < 0) throw new AppError("Break minutes must be a whole number, 0 or more.");
-  if (breakMinutes > 0 && !endAt) throw new AppError("Add the end time before recording a break.");
-  if (startAt > now) throw new AppError("Start time cannot be in the future.");
+  if (!Number.isInteger(breakMinutes) || breakMinutes < 0) throw new AppError("Break minutes must be a whole number, 0 or more.", "bad_request", "breakMinutes");
+  if (breakMinutes > 0 && !endAt) throw new AppError("Add the end time before recording a break.", "bad_request", "endAt");
+  if (startAt > now) throw new AppError("Start time cannot be in the future.", "bad_request", "startAt");
   if (endAt) {
-    if (endAt <= startAt) throw new AppError("End time must be after start time.");
-    if (breakMinutes * 60 >= elapsedSeconds(startAt, endAt)) throw new AppError("The break must be shorter than the shift.");
-    if (endAt > now) throw new AppError("End time cannot be in the future.");
+    if (endAt <= startAt) throw new AppError("End time must be after start time.", "bad_request", "endAt");
+    if (breakMinutes * 60 >= elapsedSeconds(startAt, endAt)) throw new AppError("The break must be shorter than the shift.", "bad_request", "breakMinutes");
+    if (endAt > now) throw new AppError("End time cannot be in the future.", "bad_request", "endAt");
     // Entries never span a weekly boundary; a correction that would cross one must be two entries.
     if (weekStartOf(startAt) !== weekStartOf(new Date(endAt.getTime() - 1))) {
-      throw new AppError("An entry must stay within one week (Mon–Sun). Split it into two entries.");
+      throw new AppError("An entry must stay within one week (Mon–Sun). Split it into two entries.", "bad_request", "endAt");
     }
   }
 }
@@ -74,8 +74,8 @@ async function targetTimesheet(tx: Tx, actor: Actor, workerId: string, startAt: 
 
 export function mapDbError(e: unknown): never {
   if (e instanceof AppError) throw e;
-  if (pgCode(e) === "23P01") throw new AppError("This time overlaps another entry for the worker.", "overlap");
-  if (pgCode(e) === "23505") throw new AppError("The worker already has an open entry.", "already_open");
+  if (pgCode(e) === "23P01") throw new AppError("This time overlaps another entry for the worker.", "overlap", "startAt");
+  if (pgCode(e) === "23505") throw new AppError("The worker already has an open entry.", "already_open", "startAt");
   if (pgMessage(e)?.includes("timesheet_locked")) throw new AppError("That week is approved and locked.", "locked");
   throw e;
 }
@@ -85,7 +85,7 @@ export function mapDbError(e: unknown): never {
  * Requires a reason; preserves original and revised values. Recalculates rate and value.
  */
 export async function correctEntry(actor: Actor, entryId: string, input: EntryInput, reason: string) {
-  if (!reason.trim()) throw new AppError("A reason is required for every correction.");
+  if (!reason.trim()) throw new AppError("A reason is required for every correction.", "bad_request", "reason");
   try {
     return await db.transaction(async (tx) => {
       const [entry] = await tx
@@ -97,7 +97,7 @@ export async function correctEntry(actor: Actor, entryId: string, input: EntryIn
       await assertCanManageWorker(tx, actor, entry.workerId);
       const currentTs = await lockTimesheet(tx, entry.timesheetId, actor.companyId);
       if (currentTs.status === "approved") throw new AppError("That week is approved. Reopen it before correcting.");
-      if (entry.status === "closed" && !input.endAt) throw new AppError("A closed entry needs an end time.");
+      if (entry.status === "closed" && !input.endAt) throw new AppError("A closed entry needs an end time.", "bad_request", "endAt");
       await validateAllocation(tx, actor, input.projectId, input.jobRoleId);
       const breakMinutes = input.breakMinutes ?? 0;
       validateTimes(input.startAt, input.endAt, breakMinutes);
@@ -146,7 +146,7 @@ export async function correctEntry(actor: Actor, entryId: string, input: EntryIn
 
 /** Manager/admin reconstructs a missing entry for an assigned worker (F14). */
 export async function addEntry(actor: Actor, workerId: string, input: EntryInput & { endAt: Date }, reason: string) {
-  if (!reason.trim()) throw new AppError("A reason is required.");
+  if (!reason.trim()) throw new AppError("A reason is required.", "bad_request", "reason");
   try {
     return await db.transaction((tx) => insertManagerEntry(tx, actor, workerId, input, reason.trim()));
   } catch (e) {
@@ -200,7 +200,7 @@ export async function insertManagerEntry(tx: Tx, actor: Actor, workerId: string,
 
 /** Void a duplicate or mistaken entry. History is kept; the entry is excluded from totals. */
 export async function voidEntry(actor: Actor, entryId: string, reason: string) {
-  if (!reason.trim()) throw new AppError("A reason is required.");
+  if (!reason.trim()) throw new AppError("A reason is required.", "bad_request", "reason");
   try {
     return await db.transaction(async (tx) => {
       const [entry] = await tx

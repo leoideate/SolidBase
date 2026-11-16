@@ -37,7 +37,7 @@ export default async function SettingsPage() {
       <section className="max-w-xl rounded-[18px] border border-[#ded5c9] bg-white p-4 text-sm text-[#66545d] sm:p-5">
         <h2 className="h2 mb-2">Fixed for this release</h2>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Week: Monday to Sunday, Europe/Dublin time. Shifts crossing Monday 00:00 are split.</li>
+          <li>Week: Monday to Sunday, Europe/Dublin time. Clocked shifts crossing Monday 00:00 are split automatically. Manually entered or imported shifts must be split into two entries, one for each week.</li>
           <li>Currency: EUR. Values are hours × agreed rate before deductions, rounded per entry to the cent.</li>
           <li>Unpaid breaks: workers clock out and back in.</li>
           <li>Online only: no offline clocking, GPS or photos.</li>

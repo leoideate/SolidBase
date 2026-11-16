@@ -15,6 +15,14 @@ export function DateTimePicker({ id, name, defaultValue = "", today, required = 
   const [minute, setMinute] = useState(initialMinute);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const input = root.current?.querySelector<HTMLInputElement>('input[type="datetime-local"]');
+    if (!input) return;
+    // Calendar selections (including the portalled calendar) update React state
+    // without a native input event. Expire server errors for the old timestamp.
+    input.setCustomValidity("");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }, [date, hour, minute]);
+  useEffect(() => {
     const form = root.current?.closest("form");
     function reset(event: Event) {
       queueMicrotask(() => {
